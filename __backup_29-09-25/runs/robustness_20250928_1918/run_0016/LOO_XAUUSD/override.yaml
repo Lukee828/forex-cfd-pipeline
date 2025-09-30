@@ -1,0 +1,4 @@
+sleeves:
+  tsmom:
+    lookbacks: [63, 126, 252]
+    exit_bars: 10

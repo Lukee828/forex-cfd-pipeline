@@ -1,0 +1,8 @@
+symbol,entry_half_spread_bps,entry_commission_per_million,exit_half_spread_bps,exit_commission_per_million
+EURUSD,0.5,30,0.5,30
+GBPUSD,0.8,35,0.8,35
+USDJPY,0.6,30,0.6,30
+USDCHF,0.7,35,0.7,35
+AUDUSD,0.8,35,0.8,35
+XAUUSD,1.5,60,1.5,60
+US500,0.5,50,0.5,50

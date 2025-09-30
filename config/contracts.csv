@@ -1,0 +1,6 @@
+﻿"symbol","mt5_symbol","contract_size","point_value","pip","base","quote","lot_step","lot_min","lot_max","px_mult","fill_mode","deviation"
+"EURUSD","EURUSD","100000","1","0.0001","EUR","USD","0.01","0.01","200","1","1","50"
+"GBPUSD","GBPUSD","100000","1","0.0001","GBP","USD","0.01","0.01","200","1","1","50"
+"USDJPY","USDJPY","100000","1","0.01","USD","JPY","0.01","0.01","200","1","1","50"
+"XAUUSD","XAUUSD","100","1","0.1","XAU","USD","0.01","0.01","0.50","1","0","2500"
+"US500","US500","1","1","1","USD","USD","1","1","250","50","0","100"

@@ -1,0 +1,23 @@
+# PATCH NOTES for src/exec/backtest_pnl_demo.py
+# New args to add:
+#   --nav 1000000
+#   --max_lev_per_symbol "EURUSD:2,GBPUSD:2,US500:1.5"
+#   --max_notional_per_symbol "EURUSD:200000,US500:100000"
+#   --sector_map "EURUSD:FX_EUR,GBPUSD:FX_GBP,US500:INDEX"
+#   --max_positions_per_sector 1
+#
+# Helper:
+#   def _parse_map(s, cast=float):
+#       if not s: return {}
+#       out = {}
+#       for kv in s.split(','):
+#           k,v = kv.split(':'); out[k.strip().upper()] = cast(v.strip())
+#       return out
+#
+# Usage in entry calc:
+#   lev = min(lev, cap_lev.get(s, lev))
+#   if s in cap_not and args.nav>0: lev = min(lev, cap_not[s]/args.nav)
+#   sec = sector.get(s)
+#   if sec:
+#       open_in_sector = sum(1 for ss in symbols if sector.get(ss)==sec and pos[ss]!=0)
+#       if open_in_sector >= args.max_positions_per_sector: lev = 0.0
