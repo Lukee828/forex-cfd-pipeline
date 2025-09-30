@@ -1,29 +1,29 @@
-﻿# OS/editor
+﻿# Python
+__pycache__/
+*.py[cod]
+.venv/
+.env
+*.egg-info/
+
+# Notebooks/plots/cache
+.ipynb_checkpoints/
+
+# Local data & outputs
+data/raw/
+data/tmp/
+executions/
+logs/
+signals/
+runs/
+*.log
+*.csv
+
+# OS/editor
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
 
-# Python
-__pycache__/
-*.pyc
-*.pyo
-.venv/
-venv/
-
-# Project runtime outputs
-logs/
-executions/
-signals/orders.csv
-signals/orders_validated.csv
-signals/*reconcile*.csv
-
-# If you don’t want to version raw prices, uncomment:
-# data/prices_1d/
-
-# Backups and temp
-__backup_*/
-*.tmp
-
-# Credentials (if you ever create one)
-.env
+# Secrets (prevent accidents)
+config/*.secrets.*
+config/local.*
