@@ -1,3 +1,0 @@
-fold,is_start,is_end,oos_start,oos_end,is_sharpe,is_maxdd,oos_sharpe,oos_maxdd,params
-1,2018-01-01,2021-12-31,2022-01-01,2022-12-31,-1.0991709261570155,-0.1974510897067675,-0.2858456995297919,-0.10357621141425488,"{""target_vol"": 0.15, ""vol_lookback"": 30, ""max_leverage"": 3.0, ""w_tsmom"": 1.0, ""w_xsec"": 0.8, ""w_mr"": 0.6, ""w_volcarry"": 0.0, ""vc_top_q"": 0.25, ""vc_bot_q"": 0.25, ""vc_lookback"": 42}"
-2,2019-01-01,2022-12-31,2023-01-01,2023-12-31,2.355509510804971,-0.0251143042297893,-0.08544003512581001,-0.06193463282438949,"{""target_vol"": 0.15, ""vol_lookback"": 15, ""max_leverage"": 2.0, ""w_tsmom"": 1.0, ""w_xsec"": 0.8, ""w_mr"": 0.6, ""w_volcarry"": 0.0, ""vc_top_q"": 0.25, ""vc_bot_q"": 0.25, ""vc_lookback"": 42}"
