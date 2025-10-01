@@ -3,7 +3,6 @@
 ## Identity (once per machine or per repo)
 git config --global user.name  "Your Name"
 git config --global user.email "you@example.com"
-# or per-repo (omit --global)
 
 ## New / Clone
 git init
@@ -14,22 +13,22 @@ git status
 git log --oneline --graph --decorate -n 20
 
 ## Stage & commit
-git add <path>           # stage changes
-git add -p               # interactively stage hunks
+git add <path>
+git add -p
 git commit -m "message"
 
 ## Diff & restore
-git diff                 # unstaged
-git diff --staged        # staged
-git restore <file>       # discard unstaged changes
-git restore --staged <file>  # unstage
+git diff
+git diff --staged
+git restore <file>
+git restore --staged <file>
 
 ## Branches
-git branch               # list
-git switch -c feature/x  # create & switch
-git switch main          # switch
-git merge feature/x      # merge into current
-git rebase main          # rebase onto main (careful)
+git branch
+git switch -c feature/x
+git switch main
+git merge feature/x
+git rebase main
 
 ## Stash
 git stash push -m "msg"
@@ -38,7 +37,6 @@ git stash pop
 
 ## Remote workflow
 git remote -v
-git remote add origin https://github.com/<you>/<repo>.git
 git fetch origin
 git pull --ff-only
 git push -u origin main
@@ -48,22 +46,21 @@ git push origin --tags
 git tag -a v1.0.0 -m "msg"
 git push origin v1.0.0
 
-## Undo (choose carefully)
-git reset --soft HEAD~1   # keep changes staged
-git reset --mixed HEAD~1  # keep changes unstaged (default)
-git reset --hard HEAD~1   # DROP changes
-git revert <commit>       # make inverse commit (safe)
+## Undo (pick carefully)
+git reset --soft HEAD~1
+git reset --mixed HEAD~1
+git reset --hard HEAD~1
+git revert <commit>
 
-## Git LFS (large files)
+## Git LFS
 git lfs install
 git lfs track "*.pdf"
 git add .gitattributes
 git commit -m "Enable LFS for PDFs"
 
-## Line endings (Windows-friendly)
+## Line endings
 # .gitattributes
 * text=auto eol=lf
-# Or per-language overrides as needed.
 
 ## Useful config
 git config --global pull.ff only
