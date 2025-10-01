@@ -1,39 +1,66 @@
-﻿import argparse
-from src.backtest.data_feed import ParquetDataFeed
-from src.backtest.engine import Engine
-from src.backtest.execution import SimulatedBroker
-from src.backtest.portfolio import Portfolio
-from src.backtest.strategies.ma_cross import MovingAverageCross
+﻿# src/exec/backtest_event.py
+import argparse
+from datetime import datetime, UTC
+
+from src.backtest.engine_loop import run_loop
 
 
-def main():
+class _NoOpFeed:
+    def __init__(self, steps: int) -> None:
+        self._n = steps
+        self._i = 0
+
+    class _Ev:
+        def __init__(self, ts):
+            self.ts = ts
+
+    def next_bar(self):
+        if self._i >= self._n:
+            return None
+        self._i += 1
+        return self._Ev(datetime.now(UTC))
+
+
+class _NoOpStrategy:
+    def on_market(self, event):  # returns no signals
+        return []
+
+
+class _NoOpPortfolio:
+    def on_market(self, event):
+        pass
+
+    def on_signal(self, sig):
+        return None
+
+    def on_fill(self, fill):
+        pass
+
+
+class _NoOpExecution:
+    def execute(self, order):
+        return order  # pretend filled, same shape
+
+
+def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--folder", default="data/prices_1d")
-    ap.add_argument("--symbols", nargs="+", default=["EURUSD", "GBPUSD"])
-    ap.add_argument("--short", type=int, default=20)
-    ap.add_argument("--long", type=int, default=50)
-    ap.add_argument("--cash", type=float, default=100_000.0)
-    ap.add_argument("--commission", type=float, default=0.0)
-    ap.add_argument("--slip_bps", type=float, default=0.0)
+    ap.add_argument("--cfg", required=False, help="(unused for now) config path")
+    ap.add_argument("--start", required=False)
+    ap.add_argument("--end", required=False)
+    ap.add_argument(
+        "--steps", type=int, default=25, help="how many market ticks to simulate (noop)"
+    )
+    ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
-    feed = ParquetDataFeed(args.folder, args.symbols)
-    strat = MovingAverageCross(short=args.short, long=args.long)
-    port = Portfolio(cash=args.cash)
-    broker = SimulatedBroker(
-        commission_per_trade=args.commission, slip_bps=args.slip_bps
+    steps = run_loop(
+        _NoOpFeed(args.steps), _NoOpStrategy(), _NoOpPortfolio(), _NoOpExecution()
     )
-    eng = Engine(feed.stream(), [strat], port, broker)
-    eng.run()
-
-    # Simple end-of-run summary
-    pos_summary = {
-        s: (p.qty, p.avg_px) for s, p in port.positions.items() if abs(p.qty) > 0
-    }
-    print(
-        f"Final equity: {port.equity:,.2f} | Cash: {port.cash:,.2f} | Open positions: {pos_summary}"
-    )
+    print(f"[event-driven] OK — processed {steps} market steps (noop).")
+    if args.dry_run:
+        print("[D R Y   R U N] no outputs.")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

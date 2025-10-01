@@ -39,3 +39,11 @@ notebooks/
 
 .tmp_fix_cfg.py
 config/production.yaml.bak_*
+
+*.bak
+
+*.bak_*
+
+tools/*.ps1.bak
+
+.tmp_*
