@@ -1,266 +1,239 @@
-# src/exec/make_orders.py
-# ------------------------------------------------------------
-# Generate orders.csv from positions.csv + contracts.csv
-# Supports Parquet/CSV prices, MT5 symbol mapping, px_mult scaling,
-# staleness checks, and MT5 mid-price sanity diff (bps) warnings.
-# ------------------------------------------------------------
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+Build orders.csv from a positions snapshot + latest prices.
+
+Input:
+  - positions_csv: CSV with at least: symbol, target_position
+      * target_position is the *fraction of NAV* (can be negative).
+  - contracts_csv: (optional but recommended) instrument metadata
+      columns used (when present): symbol, px_mult, contract_size
+      fallback defaults:
+        px_mult = 1
+        contract_size = 100_000 for FX (6-letter pairs), else 1
+  - prices_folder: folder with daily price CSVs named <symbol>.csv
+      each file should have a 'close' (or 'px') column; last row used
+  - nav: account NAV in USD
+  - gross_cap: informational only (we do NOT rescale positions here).
+  - max_price_age_days: warn if price is stale
+  - max_dev_bps: allow a “sanity” warning vs live MT5 ticks if available
+
+Output:
+  signals/orders.csv with columns:
+    symbol,target_position,px,notional_usd,lots
+
+Notes:
+  - lots are computed as: notional_usd / (contract_size * px)
+    (so for EURUSD, 1 lot = 100k base; we divide by contract_size then price)
+"""
+
+from __future__ import annotations
 
 import argparse
-from pathlib import Path
 import sys
-import re
+from pathlib import Path
+from datetime import datetime, timezone
+from typing import Optional, Dict
+
 import pandas as pd
 
-
-# ---------- time helpers ----------
-
-def _utc_now() -> pd.Timestamp:
-    """Return a tz-aware UTC Timestamp safely."""
-    ts = pd.Timestamp.utcnow()
-    return ts.tz_localize("UTC") if ts.tzinfo is None else ts.tz_convert("UTC")
-
-
-# ---------- price loading ----------
-
-def _ensure_dt_index(df: pd.DataFrame, src: Path, symbol: str) -> pd.DataFrame:
-    """Make the DataFrame indexed by UTC DatetimeIndex."""
-    if isinstance(df.index, pd.DatetimeIndex):
-        ix = df.index
-    else:
-        for c in ["Date", "date", "timestamp", "ts"]:
-            if c in df.columns:
-                df[c] = pd.to_datetime(df[c], utc=True, errors="coerce")
-                df = df.set_index(c)
-                break
-        ix = df.index
-        if not isinstance(ix, pd.DatetimeIndex):
-            raise ValueError(f"{symbol}: could not find datetime index/column in {src}")
-    # UTC-ize
-    if ix.tz is None:
-        df.index = df.index.tz_localize("UTC")
-    else:
-        df.index = df.index.tz_convert("UTC")
-    return df.sort_index()
+# Optional MT5 price sanity (if terminal is running)
+try:
+    import MetaTrader5 as mt5  # type: ignore
+    _HAVE_MT5 = True
+except Exception:
+    _HAVE_MT5 = False
 
 
-def load_last_close(folder: Path, symbol: str):
-    """
-    Load last close & timestamp for a symbol from either Parquet or CSV.
+def _read_positions(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        print(f"ERR: positions file not found: {path}", file=sys.stderr)
+        sys.exit(1)
+    df = pd.read_csv(path)
+    # normalize headers
+    df.columns = [c.lower() for c in df.columns]
+    need = {"symbol", "target_position"}
+    if not need.issubset(set(df.columns)):
+        print("ERR: positions.csv must contain at least: symbol,target_position", file=sys.stderr)
+        sys.exit(1)
+    # keep only relevant cols
+    return df[["symbol", "target_position"]]
 
-    Accepted schemas:
-      - index named 'Date'/'date' or unnamed DatetimeIndex, or columns 'timestamp'/'ts'
-      - close column 'Close'/'close'/'c'
-    """
-    pf = folder / f"{symbol}.parquet"
-    cf = folder / f"{symbol}.csv"
 
-    if pf.exists():
-        df = pd.read_parquet(pf)
-        src = pf
-    elif cf.exists():
-        # try detect date columns quickly
-        first = ""
+def _read_contracts(path: Optional[Path]) -> pd.DataFrame:
+    if not path or not path.exists():
+        return pd.DataFrame(columns=["symbol", "px_mult", "contract_size"])
+    c = pd.read_csv(path)
+    c.columns = [x.lower() for x in c.columns]
+    # ensure required hints exist
+    if "px_mult" not in c.columns:
+        c["px_mult"] = 1.0
+    if "contract_size" not in c.columns:
+        c["contract_size"] = pd.NA
+    return c[["symbol", "px_mult", "contract_size"]]
+
+
+def _infer_contract_size(symbol: str, contract_row: Optional[pd.Series]) -> float:
+    if contract_row is not None and pd.notna(contract_row.get("contract_size", pd.NA)):
         try:
-            with open(cf, "r", encoding="utf-8", errors="ignore") as fh:
-                first = fh.readline()
+            return float(contract_row["contract_size"])
         except Exception:
             pass
-        time_cols = [c for c in ["Date", "date", "timestamp", "ts"] if c in first]
-        df = pd.read_csv(cf, parse_dates=time_cols or None)
-        src = cf
-    else:
-        raise FileNotFoundError(f"Price file not found for {symbol}: {cf}")
-
-    df = _ensure_dt_index(df, src, symbol)
-
-    close_col = None
-    for c in ["Close", "close", "c"]:
-        if c in df.columns:
-            close_col = c
-            break
-    if close_col is None:
-        raise ValueError(f"{symbol}: could not find a close column in {src}")
-
-    last_ts = df.index[-1]
-    last_px = float(df[close_col].iloc[-1])
-    return last_px, last_ts
+    # heuristic defaults
+    sym = symbol.upper()
+    if len(sym) == 6 and sym[:3].isalpha() and sym[3:].isalpha():
+        return 100_000.0  # FX 1 lot = 100k base
+    if sym.startswith("XA"):  # XAUUSD, XAGUSD etc.
+        return 100.0
+    return 1.0
 
 
-# ---------- optional MT5 mid ----------
+def _load_last_price(prices_folder: Path, symbol: str) -> tuple[float, Optional[datetime]]:
+    f = prices_folder / f"{symbol}.csv"
+    if not f.exists():
+        print(f"ERR: price file missing for {symbol}: {f}", file=sys.stderr)
+        sys.exit(1)
+    df = pd.read_csv(f)
+    df.columns = [c.lower() for c in df.columns]
+    price_col = "close" if "close" in df.columns else ("px" if "px" in df.columns else None)
+    if not price_col:
+        print(f"ERR: {f} must contain 'close' or 'px' column", file=sys.stderr)
+        sys.exit(1)
+    last = df.iloc[-1]
+    px = float(last[price_col])
+    ts = None
+    if "ts" in df.columns:
+        try:
+            ts = pd.to_datetime(last["ts"], utc=True, errors="coerce").to_pydatetime()
+        except Exception:
+            ts = None
+    return px, ts
 
-def get_mt5_mid(sym_mt5: str):
-    """Try to fetch MT5 mid price, return None if unavailable."""
+
+def _try_mt5_tick(symbol: str) -> Optional[float]:
+    if not _HAVE_MT5:
+        return None
     try:
-        import MetaTrader5 as mt5
         if not mt5.initialize():
             return None
-        info = mt5.symbol_info_tick(sym_mt5)
-        if info is None:
-            return None
-        bid = getattr(info, "bid", None)
-        ask = getattr(info, "ask", None)
-        if bid is None or ask is None or bid <= 0 or ask <= 0:
-            return None
-        return (bid + ask) / 2.0
+        si = mt5.symbol_info(symbol)
+        if not si or not si.visible:
+            mt5.symbol_select(symbol, True)
+        tick = mt5.symbol_info_tick(symbol)
+        if tick and getattr(tick, "last", 0.0):
+            return float(tick.last)
+        if tick and getattr(tick, "ask", 0.0):
+            return float(tick.ask)
     except Exception:
         return None
+    return None
 
 
-# ---------- main ----------
+def build_orders(
+    positions_csv: Path,
+    contracts_csv: Optional[Path],
+    prices_folder: Path,
+    out_csv: Path,
+    nav: float,
+    gross_cap: float,
+    max_price_age_days: int,
+    max_dev_bps: int,
+    skip_stale: bool,
+) -> pd.DataFrame:
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--positions_csv", required=True)
-    ap.add_argument("--contracts_csv", required=True)
-    ap.add_argument("--prices_folder", required=True)
-    ap.add_argument("--out_csv", default="signals/orders.csv")
-    ap.add_argument("--nav", type=float, default=1_000_000.0)
-    ap.add_argument("--gross_cap", type=float, default=3.0)
-    ap.add_argument("--max_price_age_days", type=int, default=3)
-    ap.add_argument("--max_dev_bps", type=float, default=500.0)
-    ap.add_argument("--skip_stale", action="store_true", help="Skip stale symbols instead of failing.")
-    args = ap.parse_args()
+    pos = _read_positions(positions_csv)
+    contracts = _read_contracts(contracts_csv)
 
-    # positions
-    pos = pd.read_csv(args.positions_csv)
-    if "symbol" not in pos.columns or "target_position" not in pos.columns:
-        raise ValueError("positions.csv must have columns: symbol,target_position")
-    pos["symbol"] = pos["symbol"].astype(str).str.strip()
+    # join per-symbol hints
+    merged = pos.merge(contracts, on="symbol", how="left", suffixes=("", "_c"))
+    merged["px_mult"] = pd.to_numeric(merged["px_mult"], errors="coerce").fillna(1.0)
 
-    # --- Read contracts with defensive cleansing ---
-    specs_raw = pd.read_csv(args.contracts_csv)
-    specs_raw.columns = [str(c).strip() for c in specs_raw.columns]
-    if "symbol" not in specs_raw.columns:
-        raise ValueError("contracts.csv must contain 'symbol' column")
-
-    specs_raw = specs_raw.dropna(how="all").copy()
-    specs_raw["symbol"] = specs_raw["symbol"].astype(str).str.strip()
-    specs_raw = specs_raw[specs_raw["symbol"] != ""]
-    specs_raw = specs_raw.drop_duplicates(subset="symbol", keep="last")
-
-    # Make sure expected columns exist
-    for col, dflt in [
-        ("mt5_symbol", None),
-        ("contract_size", 1.0),
-        ("lot_step", 0.01),
-        ("lot_min", 0.0),
-        ("lot_max", 1e9),
-        ("px_mult", 1.0),
-    ]:
-        if col not in specs_raw.columns:
-            specs_raw[col] = dflt
-
-    # numeric coercion + fillna
-    for nc in ["contract_size", "lot_step", "lot_min", "lot_max", "px_mult"]:
-        specs_raw[nc] = pd.to_numeric(specs_raw[nc], errors="coerce")
-    specs_raw["mt5_symbol"] = specs_raw["mt5_symbol"].fillna(specs_raw["symbol"])
-    specs_raw["contract_size"] = specs_raw["contract_size"].fillna(1.0)
-    specs_raw["lot_step"] = specs_raw["lot_step"].fillna(0.01)
-    specs_raw["lot_min"] = specs_raw["lot_min"].fillna(0.0)
-    specs_raw["lot_max"] = specs_raw["lot_max"].fillna(1e9)
-    specs_raw["px_mult"] = specs_raw["px_mult"].fillna(1.0)
-
-    specs = specs_raw.set_index("symbol")
-
-    # --- build price map & staleness ---
-    prices = {}
-    age_days_map = {}
-    to_keep = []
-
-    for _, row in pos.iterrows():
-        sym = row["symbol"]
-        if sym not in specs.index:
-            raise RuntimeError(f"Symbol '{sym}' missing in contracts: {args.contracts_csv}")
-
-        c = specs.loc[sym]
-        sym_mt5 = str(c.get("mt5_symbol", sym)).strip()
-
-        # px_mult: allow comments in file (e.g., "50  # note")
-        raw_px_mult = str(c.get("px_mult", "1")).strip()
-        m = re.search(r"[-+]?\d*\.?\d+(?:[eE][-+]?\d+)?", raw_px_mult)
-        px_mult = float(m.group(0)) if m else 1.0
-
-        ref_px, ts = load_last_close(Path(args.prices_folder), sym)
-
-        mt5_mid = get_mt5_mid(sym_mt5)
-        px_used = float(mt5_mid) if (mt5_mid is not None and mt5_mid > 0) else float(ref_px) * px_mult
-        age_days = (_utc_now() - ts).days
-
-        prices[sym] = dict(
-            px_ref=float(ref_px),
-            px_mult=px_mult,
-            px_used=px_used,
-            ts_ref=ts,
-            sym_mt5=sym_mt5,
-            mt5_mid=float(mt5_mid) if mt5_mid is not None else None,
-        )
-        age_days_map[sym] = age_days
-        to_keep.append(sym)
-
-    # staleness preflight
-    bad_syms = [s for s, d in age_days_map.items() if d > args.max_price_age_days]
-    if bad_syms:
-        if args.skip_stale:
-            print(f"WARNING: skipping stale symbols (>{args.max_price_age_days}d): {bad_syms}")
-            pos = pos[~pos["symbol"].isin(bad_syms)]
-        else:
-            raise RuntimeError(f"Price staleness preflight failed for {bad_syms}")
-
-    # sanity check vs MT5 (bps deviation)
-    dev_rows = []
-    for sym in pos["symbol"]:
-        d = prices[sym]
-        if d["mt5_mid"] is None:
-            continue
-        ref_scaled = d["px_ref"] * d["px_mult"]
-        dev_bps = abs((d["mt5_mid"] / ref_scaled) - 1.0) * 1e4
-        if dev_bps > args.max_dev_bps:
-            dev_rows.append([sym, round(dev_bps, 2), ref_scaled, d["mt5_mid"]])
-    if dev_rows:
-        print(f"MT5 price sanity WARN (bps deviation > {args.max_dev_bps}):")
-        print("symbol dev_bps px_ref_scaled px_mt5")
-        for r in dev_rows:
-            print("%-6s %8.2f %12.6f %12.6f" % tuple(r))
-
-    # build orders
     rows = []
-    gross_abs = 0.0
-    for _, row in pos.iterrows():
-        sym = row["symbol"]
-        target = float(row["target_position"])
-        c = specs.loc[sym]
-        d = prices[sym]
+    now_utc = datetime.now(timezone.utc)
+    stale_syms = []
 
-        contract_size = float(c["contract_size"])
-        lot_step = float(c["lot_step"])
-        px_used = float(d["px_used"])
+    for _, r in merged.iterrows():
+        sym = str(r["symbol"])
+        px_raw, ts = _load_last_price(prices_folder, sym)
+        if ts is not None:
+            age_days = (now_utc - ts).days
+            if age_days > max_price_age_days:
+                msg = f"{sym} price is stale by {age_days}d (> {max_price_age_days})"
+                if skip_stale:
+                    print(f"SKIP: {msg}")
+                    continue
+                else:
+                    stale_syms.append(msg)
 
-        notional = target * args.nav
-        lots = notional / (contract_size * px_used)
-        lots_rounded = round(lots / lot_step) * lot_step
+        px = px_raw * float(r["px_mult"])
+        cs = _infer_contract_size(sym, r)
+        target = float(r["target_position"])
+        notional = target * float(nav)
+        lots = 0.0 if px <= 0 or cs <= 0 else (notional / (cs * px))
 
-        rows.append(dict(
-            symbol=sym,
-            target_position=target,
-            px=px_used,
-            notional_usd=notional,
-            lots=lots_rounded
-        ))
-        gross_abs += abs(notional)
+        rows.append({
+            "symbol": sym,
+            "target_position": target,
+            "px": round(px, 6),
+            "notional_usd": notional,
+            "lots": lots,
+        })
 
-    # gross cap scaling
-    scale = 1.0
-    cap = args.nav * args.gross_cap
-    if gross_abs > cap:
-        scale = cap / gross_abs
-        for r in rows:
-            r["target_position"] *= scale
-            r["notional_usd"] *= scale
-            r["lots"] *= scale
+        # optional MT5 sanity
+        mt5_px = _try_mt5_tick(sym)
+        if mt5_px is not None and px > 0:
+            dev_bps = abs((mt5_px / px) - 1.0) * 10_000
+            if dev_bps > max_dev_bps:
+                print("MT5 price sanity WARN (bps deviation > %.1f):" % max_dev_bps)
+                print("symbol dev_bps px_ref_scaled px_mt5")
+                print(f"{sym:6s} {dev_bps:8.2f} {px:12.6f} {mt5_px:12.6f}")
 
+    if stale_syms:
+        for msg in stale_syms:
+            print(f"WARN: {msg}")
+
+    out_df = pd.DataFrame(rows)
+    out_df.to_csv(out_csv, index=False)
+
+    # Gross diagnostics (informational)
+    gross_before = float((abs(pos["target_position"]).sum()) * nav)
+    scale = 0.0
+    if abs(pos["target_position"]).sum() > 0:
+        scale = float(gross_cap / abs(pos["target_position"]).sum())
+    print(f"Saved orders to {out_csv} | gross before scale: {gross_before:,.0f} | scale: {scale:.3f}")
+
+    return out_df
+
+
+def parse_args(argv=None):
+    p = argparse.ArgumentParser(description="Create MT5 orders from positions.")
+    p.add_argument("--positions_csv", required=True)
+    p.add_argument("--contracts_csv", required=False)
+    p.add_argument("--prices_folder", required=True)
+    p.add_argument("--out_csv", default="signals/orders.csv")
+    p.add_argument("--nav", type=float, default=1_000_000.0)
+    p.add_argument("--gross_cap", type=float, default=0.20)
+    p.add_argument("--max_price_age_days", type=int, default=7)
+    p.add_argument("--max_dev_bps", type=int, default=500.0)
+    p.add_argument("--skip_stale", action="store_true", help="skip symbols whose prices are too old")
+    return p.parse_args(argv)
+
+
+def main(argv=None):
+    args = parse_args(argv)
     Path(args.out_csv).parent.mkdir(parents=True, exist_ok=True)
-    pd.DataFrame(rows).to_csv(args.out_csv, index=False)
-    print(f"Saved orders to {args.out_csv} | gross before scale: {gross_abs:,.0f} | scale: {scale:.3f}")
+    build_orders(
+        positions_csv=Path(args.positions_csv),
+        contracts_csv=Path(args.contracts_csv) if args.contracts_csv else None,
+        prices_folder=Path(args.prices_folder),
+        out_csv=Path(args.out_csv),
+        nav=args.nav,
+        gross_cap=args.gross_cap,
+        max_price_age_days=args.max_price_age_days,
+        max_dev_bps=args.max_dev_bps,
+        skip_stale=args.skip_stale,
+    )
 
 
 if __name__ == "__main__":

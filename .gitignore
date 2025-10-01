@@ -27,3 +27,5 @@ Thumbs.db
 # Secrets (prevent accidents)
 config/*.secrets.*
 config/local.*
+# keep canonical config csvs
+!config/*.csv

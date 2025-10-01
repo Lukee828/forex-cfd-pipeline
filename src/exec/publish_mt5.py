@@ -1,254 +1,311 @@
-# src/exec/publish_mt5.py
-# ------------------------------------------------------------
-# Publish orders to MetaTrader 5 (or just preview with --dry_run true)
-# Expects orders.csv created by make_orders.py with at least:
-#   symbol,target_position,px,lots
-# Uses contracts.csv for MT5 mapping + volume constraints.
-# Produces signals/orders_validated.csv preview.
-# ------------------------------------------------------------
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 
-import argparse
-from pathlib import Path
+"""
+Publish orders to MetaTrader 5.
+
+- Reads orders CSV produced by make_orders (columns: symbol, px, lots, target_position, notional_usd).
+- Joins with contracts CSV for lot constraints & per-symbol overrides.
+- Rounds/normalizes order sizes to lot_step, skips anything < lot_min after rounding, caps at lot_max.
+- Chooses fill modes intelligently (IOC for FX/metals, RETURN for indices), but honors CSV fill_mode when set.
+- Dry run prints an accurate post-rounding preview table (what would be sent).
+"""
+
+from __future__ import annotations
+
+import os
 import sys
 import math
-from datetime import datetime, timezone
+import argparse
+from pathlib import Path
+from datetime import datetime
+from decimal import Decimal, ROUND_FLOOR
+from typing import List, Dict, Any, Optional
+
 import pandas as pd
 
-# Optional dependency: MetaTrader5
 try:
     import MetaTrader5 as mt5
-except Exception:  # pragma: no cover
-    mt5 = None
+except Exception as ex:  # pragma: no cover
+    print(f"ERROR: failed to import MetaTrader5: {ex}", file=sys.stderr)
+    sys.exit(2)
 
 
-def _round_step(x: float, step: float) -> float:
-    if step <= 0:
-        return x
-    return round(x / step) * step
+# -----------------------------
+# Helpers
+# -----------------------------
+
+def _step_decimals(step: float) -> int:
+    s = f"{step:.10f}".rstrip("0").rstrip(".")
+    if "." in s:
+        return len(s.split(".")[1])
+    return 0
 
 
-def _safe_float(v, default=0.0):
+def normalize_volume(vol: float, lot_step: float, lot_min: float, lot_max: float) -> float:
+    """
+    Round DOWN to step, clamp to [0, lot_max]. Return 0.0 if < lot_min after rounding.
+    """
+    if vol <= 0.0:
+        return 0.0
+    decs = _step_decimals(lot_step)
+    dvol = Decimal(str(vol))
+    dstep = Decimal(str(lot_step))
+    units = (dvol / dstep).to_integral_value(rounding=ROUND_FLOOR)
+    dv = units * dstep
+    dv = min(dv, Decimal(str(lot_max)))
+    if dv < Decimal(str(lot_min)):
+        return 0.0
+    return float(round(dv, decs))
+
+
+def infer_fill_pref(symbol: str, csv_fill_mode: Optional[int]) -> List[Optional[int]]:
+    """
+    Return a list of fill modes to try, ordered by likelihood for your broker.
+    MT5 constants: RETURN=0, IOC=1, FOK=2. None -> let MT5 decide (often rejected).
+    """
+    sym = symbol.upper()
+    if csv_fill_mode is not None:
+        base = [int(csv_fill_mode)]
+    else:
+        # FX pairs (6 letters) and popular metals: prefer IOC first.
+        if sym.startswith("XA") or (len(sym) == 6 and sym[:3].isalpha() and sym[3:].isalpha()):
+            base = [1, 0, 2]  # IOC, RETURN, FOK
+        else:
+            base = [0, 1, 2]  # Indices/CFDs often OK with RETURN
+    return base + [None]
+
+
+def _as_int(x, default=None) -> Optional[int]:
+    if pd.isna(x) or (isinstance(x, str) and x.strip() == ""):
+        return default
     try:
-        return float(v)
+        return int(float(x))
     except Exception:
-        return float(default)
+        return default
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--orders_csv", required=True)
-    ap.add_argument("--contracts_csv", required=True)
-    ap.add_argument("--dry_run", type=lambda x: str(x).lower() == "true", default=True)
-    ap.add_argument("--deviation", type=int, default=50, help="default slippage in points")
-    ap.add_argument("--margin_buffer_pct", type=float, default=0.0, help="reserve margin buffer %")
-    args = ap.parse_args()
+def _as_float(x, default=None) -> Optional[float]:
+    if pd.isna(x) or (isinstance(x, str) and x.strip() == ""):
+        return default
+    try:
+        return float(x)
+    except Exception:
+        return default
 
-    orders_path = Path(args.orders_csv)
-    contracts_path = Path(args.contracts_csv)
 
-    if not orders_path.exists():
-        print(f"ERR: orders file not found: {orders_path}", file=sys.stderr)
-        sys.exit(2)
-    if not contracts_path.exists():
-        print(f"ERR: contracts file not found: {contracts_path}", file=sys.stderr)
-        sys.exit(2)
+# -----------------------------
+# Core
+# -----------------------------
 
-    # --- Load inputs ---
-    orders_df = pd.read_csv(orders_path)
-    if not {"symbol", "target_position", "px", "lots"}.issubset(orders_df.columns):
+def load_orders(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        print(f"ERR: orders file not found: {path}", file=sys.stderr)
+        sys.exit(1)
+    orders = pd.read_csv(path)
+    need = {"symbol", "px", "lots"}
+    if not need.issubset({c.lower() for c in orders.columns} | set(orders.columns)):
         print("ERR: orders.csv must contain columns: symbol,target_position,px,lots", file=sys.stderr)
-        sys.exit(2)
+        sys.exit(1)
+    # Normalize column names
+    cols = {c: c.lower() for c in orders.columns}
+    orders = orders.rename(columns=cols)
+    return orders[["symbol", "px", "lots"]]
 
-    specs_raw = pd.read_csv(contracts_path)
-    if "mt5_symbol" not in specs_raw.columns:
-        specs_raw["mt5_symbol"] = specs_raw["symbol"]
 
-    # volume constraints
-    for c, dflt in [("lot_min", 0.0), ("lot_max", 1e9), ("lot_step", 0.01)]:
-        if c not in specs_raw.columns:
-            specs_raw[c] = dflt
-        specs_raw[c] = pd.to_numeric(specs_raw[c], errors="coerce").fillna(dflt)
+def load_contracts(path: Path) -> pd.DataFrame:
+    if not path.exists():
+        print(f"WARN: contracts file not found: {path}. Proceeding with defaults.", file=sys.stderr)
+        return pd.DataFrame()
+    c = pd.read_csv(path)
+    # normalize names
+    cols = {cname: cname.lower() for cname in c.columns}
+    c = c.rename(columns=cols)
+    # expected columns if present
+    for col in ["symbol", "mt5_symbol", "lot_min", "lot_step", "lot_max", "deviation", "fill_mode"]:
+        if col not in c.columns:
+            c[col] = pd.NA
+    return c
 
-    # user overrides
-    if "fill_mode" not in specs_raw.columns:
-        specs_raw["fill_mode"] = None
-    if "deviation" not in specs_raw.columns:
-        specs_raw["deviation"] = None
 
-    specs = specs_raw.set_index("symbol")
+def mt5_init_or_die() -> None:
+    login = os.getenv("MT5_LOGIN")
+    password = os.getenv("MT5_PASSWORD")
+    server = os.getenv("MT5_SERVER")
+    # If no env creds, MT5.initialize() will use the running terminal/session
+    if login and password and server:
+        ok = mt5.initialize(login=int(login), password=password, server=server)
+    else:
+        ok = mt5.initialize()
+    if not ok:
+        print(f"[MT5] initialize failed: {mt5.last_error()}", file=sys.stderr)
+        sys.exit(3)
+    ti = mt5.terminal_info()
+    print(f"[MT5] initialized (dry_run={False}; login={(login and '(env)') or '(terminal)'} server={(server or '(terminal)')} )")
 
-    # --- Build validated rows ---
-    rows = []
-    for _, r in orders_df.iterrows():
-        sym_in = str(r["symbol"]).strip()
-        if sym_in not in specs.index:
-            print(f"WARN: skipping {sym_in} (missing in contracts)", file=sys.stderr)
-            continue
 
-        c = specs.loc[sym_in]
-        sym_mt5 = str(c.get("mt5_symbol", sym_in)).strip()
+def build_preview_and_requests(orders: pd.DataFrame, contracts: pd.DataFrame, cli_dev: int) -> tuple[pd.DataFrame, List[Dict[str, Any]]]:
+    merged = orders.copy()
+    # Join on symbol if contracts present, prefer mt5_symbol when given
+    if not contracts.empty:
+        merged = merged.merge(contracts, on="symbol", how="left", suffixes=("", "_c"))
+        merged["mt5_symbol"] = merged["mt5_symbol"].fillna(merged["symbol"])
+    else:
+        merged["mt5_symbol"] = merged["symbol"]
 
-        lots_req = _safe_float(r.get("lots", 0.0), 0.0)
-        side = "FLAT"
-        if lots_req > 0:
-            side = "BUY"
-        elif lots_req < 0:
-            side = "SELL"
+    # Numeric cleanup
+    for col in ["lot_min", "lot_step", "lot_max"]:
+        merged[col] = pd.to_numeric(merged.get(col), errors="coerce")
+    merged["deviation"] = pd.to_numeric(merged.get("deviation"), errors="coerce")
+    # Defaults
+    merged["lot_min"] = merged["lot_min"].fillna(0.01)
+    merged["lot_step"] = merged["lot_step"].fillna(0.01)
+    merged["lot_max"] = merged["lot_max"].fillna(1e9)
+    merged["deviation"] = merged["deviation"].fillna(cli_dev)
 
-        lots_abs = abs(lots_req)
-        step = _safe_float(c.get("lot_step", 0.01), 0.01)
-        vmin = _safe_float(c.get("lot_min", 0.0), 0.0)
-        vmax = _safe_float(c.get("lot_max", 1e9), 1e9)
+    # Side from lots sign, use abs value for normalization
+    merged["side"] = merged["lots"].apply(lambda x: "SELL" if float(x) < 0 else ("BUY" if float(x) > 0 else "FLAT"))
+    merged["lots_abs"] = merged["lots"].abs().astype(float)
 
-        lots_rounded = _round_step(lots_abs, step)
-        if lots_rounded < max(vmin, step):
-            lots_rounded = 0.0
-            side = "FLAT"
-        lots_rounded = min(lots_rounded, vmax)
-
-        px_used = _safe_float(r.get("px", 0.0), 0.0)
-
-        rows.append(
-            dict(
-                sym_in=sym_in,
-                sym_mt5=sym_mt5,
-                side=side,
-                volume=(+lots_rounded if side == "BUY" else (-lots_rounded if side == "SELL" else 0.0)),
-                price_used=px_used,
-                vol_min=vmin,
-                vol_step=step,
-                vol_max=vmax,
-                _fill_pref=c.get("fill_mode", None),
-                _deviation=c.get("deviation", None),
-            )
+    # Normalize volumes
+    norm_vols = []
+    for _, r in merged.iterrows():
+        v = normalize_volume(
+            vol=float(r["lots_abs"]),
+            lot_step=float(r["lot_step"]),
+            lot_min=float(r["lot_min"]),
+            lot_max=float(r["lot_max"]),
         )
+        if r["side"] == "SELL":
+            v = -v
+        elif r["side"] == "FLAT":
+            v = 0.0
+        norm_vols.append(v)
+    merged["volume"] = norm_vols
 
-    out_df = pd.DataFrame(rows)
-    out_validated = orders_path.with_name("orders_validated.csv")
-    out_df.to_csv(out_validated, index=False)
+    # Build send requests
+    to_send: List[Dict[str, Any]] = []
+    for _, r in merged.iterrows():
+        sym = str(r["mt5_symbol"])
+        side = str(r["side"]).upper()
+        vol = float(r["volume"])
+        if vol == 0.0:
+            continue  # skip tiny/flat
+        px = float(r["px"])
+        # fill prefs
+        csv_fill = _as_int(r.get("fill_mode"), None)
+        fills = infer_fill_pref(sym, csv_fill)
+        req = {
+            "symbol": sym,
+            "side": side,
+            "volume": abs(vol),
+            "type": mt5.ORDER_TYPE_SELL if vol < 0 else mt5.ORDER_TYPE_BUY,
+            "price": px,
+            "deviation": int(r["deviation"]),
+            "fills": fills,
+        }
+        to_send.append(req)
 
-    # --- Preview ---
-    if len(out_df) == 0:
-        print("Nothing to do (no valid orders).")
-        return
+    # Preview table
+    preview = merged[[
+        "symbol", "mt5_symbol", "side", "volume", "px", "lot_min", "lot_step", "lot_max"
+    ]].rename(columns={"px": "price_used", "symbol": "sym_in"})
 
+    return preview, to_send
+
+
+def send_orders(requests: List[Dict[str, Any]]) -> Dict[str, str]:
+    failed: Dict[str, str] = {}
+
+    for o in requests:
+        # Ensure symbol is visible
+        si = mt5.symbol_info(o["symbol"])
+        if not si or not si.visible:
+            mt5.symbol_select(o["symbol"], True)
+
+        tried = []
+        sent = False
+        for fm in o["fills"]:
+            req = {
+                "action": mt5.TRADE_ACTION_DEAL,
+                "symbol": o["symbol"],
+                "volume": o["volume"],
+                "type": o["type"],
+                "price": o["price"],
+                "deviation": o["deviation"],
+                "type_time": mt5.ORDER_TIME_GTC,
+            }
+            if fm is not None:
+                req["type_filling"] = fm
+
+            res = mt5.order_send(req)
+            tried.append((fm, getattr(res, "retcode", None), getattr(res, "comment", None)))
+
+            if getattr(res, "retcode", None) == mt5.TRADE_RETCODE_DONE:  # 10009
+                sent = True
+                break
+
+        if not sent:
+            print(f"[{o['symbol']}] order failed: {tried}")
+            failed[o["symbol"]] = "check contract settings / fill modes"
+
+    return failed
+
+
+# -----------------------------
+# CLI
+# -----------------------------
+
+def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
+    p = argparse.ArgumentParser(description="Publish orders to MT5")
+    p.add_argument("--orders_csv", required=True, help="orders.csv path")
+    p.add_argument("--contracts_csv", required=True, help="contracts.csv path")
+    p.add_argument("--dry_run", default="true", help="true/false (default true)")
+    p.add_argument("--deviation", type=int, default=50, help="Default slippage (points) if not set per symbol")
+    return p.parse_args(argv)
+
+
+def main(argv: Optional[List[str]] = None) -> None:
+    args = parse_args(argv)
+    orders_csv = Path(args.orders_csv)
+    contracts_csv = Path(args.contracts_csv)
+    dry_run = str(args.dry_run).lower() in {"1", "true", "yes", "y"}
+
+    orders = load_orders(orders_csv)
+    contracts = load_contracts(contracts_csv)
+
+    preview, to_send = build_preview_and_requests(orders, contracts, args.deviation)
+
+    # Print preview
     print("MT5 ORDERS (post-rounding preview):")
-    try:
-        print(
-            out_df[["sym_in", "sym_mt5", "side", "volume", "price_used", "vol_min", "vol_step", "vol_max"]]
-            .to_string(index=False)
-        )
-    except Exception:
-        for rec in rows:
-            print(rec)
+    with pd.option_context("display.max_columns", None, "display.width", 120):
+        print(preview.to_string(index=False))
 
-    if args.dry_run or mt5 is None:
-        if mt5 is None and not args.dry_run:
-            print("WARN: MetaTrader5 module not available; treated as dry run.")
+    if dry_run:
         print("MT5 DRY RUN — no orders sent.")
         return
 
-    # --- Live send ---
-    if not mt5.initialize():
-        print("ERR: mt5.initialize() failed.", file=sys.stderr)
-        sys.exit(3)
+    # Live mode
+    mt5_init_or_die()
+    failed = send_orders(to_send)
 
-    # sanitize fill/deviation columns
-    out_df["_fill_pref"] = pd.to_numeric(out_df["_fill_pref"], errors="coerce")
-    out_df["_deviation"] = pd.to_numeric(out_df["_deviation"], errors="coerce")
+    # Optional: simple reconcile artifact
+    try:
+        Path("executions").mkdir(parents=True, exist_ok=True)
+        run_ts = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+        recon_path = Path("executions") / f"reconcile_{run_ts}.csv"
+        preview.to_csv(recon_path, index=False)
+        print(f"[RECON] saved: {recon_path}")
+    except Exception as ex:
+        print(f"WARN: failed to write reconcile: {ex}", file=sys.stderr)
 
-    failures = []
-    run_ts = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S")
-
-    for _, rec in out_df.iterrows():
-        sym = rec["sym_mt5"]
-        side = rec["side"]
-        vol = float(rec["volume"])
-
-        if side == "FLAT" or abs(vol) <= 0:
-            continue
-
-        si = mt5.symbol_info(sym)
-        if si is None:
-            if not mt5.symbol_select(sym, True):
-                failures.append((sym, "symbol_select_failed"))
-                continue
-            si = mt5.symbol_info(sym)
-        if si is None:
-            failures.append((sym, "symbol_info_none"))
-            continue
-
-        step = float(si.volume_step) if getattr(si, "volume_step", 0) else float(rec["vol_step"])
-        vmin = float(si.volume_min) if getattr(si, "volume_min", 0) else float(rec["vol_min"])
-        vmax = float(si.volume_max) if getattr(si, "volume_max", 0) else float(rec["vol_max"])
-
-        vol_adj = _round_step(abs(vol), step)
-        if vol_adj < max(vmin, step):
-            continue
-        vol_adj = min(vol_adj, vmax)
-
-        # deviation
-        dev_val = rec.get("_deviation")
-        if dev_val is not None and not pd.isna(dev_val):
-            try:
-                dev_points = int(dev_val)
-            except Exception:
-                dev_points = int(args.deviation)
-        else:
-            dev_points = int(args.deviation)
-
-        # build fills
-        fm_default = [0, 1, 2]
-        fm_pref = []
-        si_fill = getattr(si, "filling_mode", None)
-        if si_fill in (0, 1, 2):
-            fm_pref.append(int(si_fill))
-        pref = rec.get("_fill_pref")
-        if pref is not None and not pd.isna(pref):
-            try:
-                pref_i = int(pref)
-                if pref_i in (0, 1, 2) and pref_i not in fm_pref:
-                    fm_pref.insert(0, pref_i)
-            except Exception:
-                pass
-        for f in fm_default:
-            if f not in fm_pref:
-                fm_pref.append(f)
-
-        # build base request
-        tick = mt5.symbol_info_tick(sym)
-        req = {
-            "action": mt5.TRADE_ACTION_DEAL,
-            "symbol": sym,
-            "volume": vol_adj,
-            "type": mt5.ORDER_TYPE_BUY if side == "BUY" else mt5.ORDER_TYPE_SELL,
-            "price": tick.ask if side == "BUY" else tick.bid,
-            "deviation": dev_points,
-            "type_time": mt5.ORDER_TIME_GTC,
-        }
-
-        sent = False
-        last_ret = None
-        for fm in fm_pref:
-            req["type_filling"] = fm
-            try:
-                res = mt5.order_send(req)
-                last_ret = res
-                if res and getattr(res, "retcode", 0) == mt5.TRADE_RETCODE_DONE:
-                    sent = True
-                    break
-            except Exception as e:
-                last_ret = f"exception: {e}"
-                continue
-
-        if not sent:
-            failures.append((sym, getattr(last_ret, "retcode", last_ret)))
-
-    if failures:
+    if failed:
         print("Some orders failed:")
-        for sym, rc in failures:
-            print(f"  {sym}: retcode={rc}")
+        for s, why in failed.items():
+            print(f"  {s}: {why}")
         sys.exit(4)
+
+    print("All orders sent.")
 
 
 if __name__ == "__main__":
