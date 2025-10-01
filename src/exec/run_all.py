@@ -1,5 +1,7 @@
+import argparse
+import subprocess
+import sys
 
-import argparse, subprocess, sys, os
 
 def main():
     ap = argparse.ArgumentParser()
@@ -19,24 +21,40 @@ def main():
     args = ap.parse_args()
 
     cmd = [
-        sys.executable, "-m", "src.exec.backtest_pnl_demo",
-        "--cfg", args.cfg,
-        "--folder", args.folder,
-        "--costs_csv", args.costs_csv,
-        "--target_ann_vol", str(args.target_ann_vol),
-        "--vol_lookback", str(args.vol_lookback),
-        "--max_leverage", str(args.max_leverage),
-        "--mtd_soft", str(args.mtd_soft),
-        "--mtd_hard", str(args.mtd_hard),
-        "--w_tsmom", str(args.w_tsmom),
-        "--w_xsec", str(args.w_xsec),
-        "--w_mr", str(args.w_mr),
-        "--w_volcarry", str(args.w_volcarry),
-        "--nav", str(args.nav)
+        sys.executable,
+        "-m",
+        "src.exec.backtest_pnl_demo",
+        "--cfg",
+        args.cfg,
+        "--folder",
+        args.folder,
+        "--costs_csv",
+        args.costs_csv,
+        "--target_ann_vol",
+        str(args.target_ann_vol),
+        "--vol_lookback",
+        str(args.vol_lookback),
+        "--max_leverage",
+        str(args.max_leverage),
+        "--mtd_soft",
+        str(args.mtd_soft),
+        "--mtd_hard",
+        str(args.mtd_hard),
+        "--w_tsmom",
+        str(args.w_tsmom),
+        "--w_xsec",
+        str(args.w_xsec),
+        "--w_mr",
+        str(args.w_mr),
+        "--w_volcarry",
+        str(args.w_volcarry),
+        "--nav",
+        str(args.nav),
     ]
 
     print("Running:", " ".join(cmd))
     sys.exit(subprocess.call(cmd))
+
 
 if __name__ == "__main__":
     main()

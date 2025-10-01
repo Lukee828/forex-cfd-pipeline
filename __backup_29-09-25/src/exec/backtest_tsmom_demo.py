@@ -1,17 +1,20 @@
-import argparse, yaml, pandas as pd
+import argparse
+import yaml
+import pandas as pd
 from ..core.loader import load_parquet
 from ..sleeves.ts_mom import signals as ts_signals
 from ..exec.aggregate import to_net
 
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--cfg', required=True)
-    ap.add_argument('--tf', default='1d')
-    ap.add_argument('--symbol', required=True)
-    ap.add_argument('--path', required=True, help='Parquet path for symbol/timeframe')
+    ap.add_argument("--cfg", required=True)
+    ap.add_argument("--tf", default="1d")
+    ap.add_argument("--symbol", required=True)
+    ap.add_argument("--path", required=True, help="Parquet path for symbol/timeframe")
     args = ap.parse_args()
 
-    with open(args.cfg, 'r', encoding='utf-8') as fh:
+    with open(args.cfg, "r", encoding="utf-8") as fh:
         cfg = yaml.safe_load(fh)
 
     df = load_parquet(args.path)
@@ -29,7 +32,7 @@ def main():
         df = df.copy()
         df["symbol"] = args.symbol
 
-    df = df[["Open","High","Low","Close","Volume","symbol"]].dropna().sort_index()
+    df = df[["Open", "High", "Low", "Close", "Volume", "symbol"]].dropna().sort_index()
 
     # Call sleeve directly on the daily DF (DatetimeIndex preserved)
     intents = ts_signals(
@@ -39,10 +42,12 @@ def main():
         symbols=[args.symbol],
     )
     net = to_net(intents)
-    print(f"Signals generated: {len(intents)}, Net positions after aggregation: {len(net)}")
+    print(
+        f"Signals generated: {len(intents)}, Net positions after aggregation: {len(net)}"
+    )
     for oi in net[:10]:
         print(oi.ts_utc, oi.symbol, oi.side, oi.tag)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

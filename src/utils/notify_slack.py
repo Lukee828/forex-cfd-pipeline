@@ -1,4 +1,7 @@
-import os, json, urllib.request
+import os
+import json
+import urllib.request
+
 
 def send_slack(text: str, webhook_env="SLACK_WEBHOOK_URL"):
     url = os.getenv(webhook_env)

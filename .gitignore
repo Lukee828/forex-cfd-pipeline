@@ -29,3 +29,10 @@ config/*.secrets.*
 config/local.*
 # keep canonical config csvs
 !config/*.csv
+
+
+__backup_*/
+reports/
+notebooks/
+
+.precommit_cache/

@@ -1,18 +1,21 @@
-import smtplib, ssl, os
+import smtplib
+import ssl
+import os
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+
 
 def send_email(subject: str, body_text: str, body_html: str | None = None):
     """
     Sends a plaintext (and optional HTML) email using SMTP creds from env vars:
       ALERT_TO, ALERT_FROM, SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS
     """
-    to      = os.getenv("ALERT_TO")
-    sender  = os.getenv("ALERT_FROM")
-    host    = os.getenv("SMTP_HOST")
-    port    = int(os.getenv("SMTP_PORT", "587"))
-    user    = os.getenv("SMTP_USER")
-    psw     = os.getenv("SMTP_PASS")
+    to = os.getenv("ALERT_TO")
+    sender = os.getenv("ALERT_FROM")
+    host = os.getenv("SMTP_HOST")
+    port = int(os.getenv("SMTP_PORT", "587"))
+    user = os.getenv("SMTP_USER")
+    psw = os.getenv("SMTP_PASS")
 
     if not all([to, sender, host, user, psw]):
         print("WARN notify: missing SMTP envs; skipping email.")

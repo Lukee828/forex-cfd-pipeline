@@ -34,13 +34,14 @@ import argparse
 import sys
 from pathlib import Path
 from datetime import datetime, timezone
-from typing import Optional, Dict
+from typing import Optional
 
 import pandas as pd
 
 # Optional MT5 price sanity (if terminal is running)
 try:
     import MetaTrader5 as mt5  # type: ignore
+
     _HAVE_MT5 = True
 except Exception:
     _HAVE_MT5 = False
@@ -55,7 +56,10 @@ def _read_positions(path: Path) -> pd.DataFrame:
     df.columns = [c.lower() for c in df.columns]
     need = {"symbol", "target_position"}
     if not need.issubset(set(df.columns)):
-        print("ERR: positions.csv must contain at least: symbol,target_position", file=sys.stderr)
+        print(
+            "ERR: positions.csv must contain at least: symbol,target_position",
+            file=sys.stderr,
+        )
         sys.exit(1)
     # keep only relevant cols
     return df[["symbol", "target_position"]]
@@ -89,14 +93,18 @@ def _infer_contract_size(symbol: str, contract_row: Optional[pd.Series]) -> floa
     return 1.0
 
 
-def _load_last_price(prices_folder: Path, symbol: str) -> tuple[float, Optional[datetime]]:
+def _load_last_price(
+    prices_folder: Path, symbol: str
+) -> tuple[float, Optional[datetime]]:
     f = prices_folder / f"{symbol}.csv"
     if not f.exists():
         print(f"ERR: price file missing for {symbol}: {f}", file=sys.stderr)
         sys.exit(1)
     df = pd.read_csv(f)
     df.columns = [c.lower() for c in df.columns]
-    price_col = "close" if "close" in df.columns else ("px" if "px" in df.columns else None)
+    price_col = (
+        "close" if "close" in df.columns else ("px" if "px" in df.columns else None)
+    )
     if not price_col:
         print(f"ERR: {f} must contain 'close' or 'px' column", file=sys.stderr)
         sys.exit(1)
@@ -172,13 +180,15 @@ def build_orders(
         notional = target * float(nav)
         lots = 0.0 if px <= 0 or cs <= 0 else (notional / (cs * px))
 
-        rows.append({
-            "symbol": sym,
-            "target_position": target,
-            "px": round(px, 6),
-            "notional_usd": notional,
-            "lots": lots,
-        })
+        rows.append(
+            {
+                "symbol": sym,
+                "target_position": target,
+                "px": round(px, 6),
+                "notional_usd": notional,
+                "lots": lots,
+            }
+        )
 
         # optional MT5 sanity
         mt5_px = _try_mt5_tick(sym)
@@ -201,7 +211,9 @@ def build_orders(
     scale = 0.0
     if abs(pos["target_position"]).sum() > 0:
         scale = float(gross_cap / abs(pos["target_position"]).sum())
-    print(f"Saved orders to {out_csv} | gross before scale: {gross_before:,.0f} | scale: {scale:.3f}")
+    print(
+        f"Saved orders to {out_csv} | gross before scale: {gross_before:,.0f} | scale: {scale:.3f}"
+    )
 
     return out_df
 
@@ -216,7 +228,11 @@ def parse_args(argv=None):
     p.add_argument("--gross_cap", type=float, default=0.20)
     p.add_argument("--max_price_age_days", type=int, default=7)
     p.add_argument("--max_dev_bps", type=int, default=500.0)
-    p.add_argument("--skip_stale", action="store_true", help="skip symbols whose prices are too old")
+    p.add_argument(
+        "--skip_stale",
+        action="store_true",
+        help="skip symbols whose prices are too old",
+    )
     return p.parse_args(argv)
 
 

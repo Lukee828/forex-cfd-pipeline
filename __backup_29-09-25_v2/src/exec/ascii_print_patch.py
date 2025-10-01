@@ -1,6 +1,6 @@
-
 # PATCH: ASCII-only prints to avoid Windows cp1250 UnicodeEncodeError
 # Replace the corresponding print block in your backtester with this safe version.
+
 
 def _print_summary(merged):
     start = merged.index.min()

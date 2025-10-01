@@ -26,7 +26,10 @@ except Exception as ex:  # pragma: no cover
 
 # Choose the symbols you actually trade (safe defaults; extend if needed)
 DEFAULT_SYMBOLS = [
-    "EURUSD", "GBPUSD", "USDJPY", "AUDUSD",
+    "EURUSD",
+    "GBPUSD",
+    "USDJPY",
+    "AUDUSD",
     "XAUUSD",
     "US500",
 ]
@@ -74,22 +77,24 @@ def main():
         elif sym.upper() == "US500":
             pip = 1.0
 
-        rows.append({
-            "symbol": sym,
-            "mt5_symbol": sym,
-            "contract_size": contract_size,
-            "point_value": point_value,
-            "pip": pip,
-            "base": base,
-            "quote": quote,
-            "lot_step": getattr(si, "volume_step", 0.01) or 0.01,
-            "lot_min": getattr(si, "volume_min", 0.01) or 0.01,
-            "lot_max": getattr(si, "volume_max", 100.0) or 100.0,
-            # defaults for publisher; can be edited later in CSV
-            "px_mult": 1,
-            "fill_mode": "",         # leave empty to let code infer IOC/RETURN
-            "deviation": "",         # leave empty; CLI default (e.g., 50) will be used
-        })
+        rows.append(
+            {
+                "symbol": sym,
+                "mt5_symbol": sym,
+                "contract_size": contract_size,
+                "point_value": point_value,
+                "pip": pip,
+                "base": base,
+                "quote": quote,
+                "lot_step": getattr(si, "volume_step", 0.01) or 0.01,
+                "lot_min": getattr(si, "volume_min", 0.01) or 0.01,
+                "lot_max": getattr(si, "volume_max", 100.0) or 100.0,
+                # defaults for publisher; can be edited later in CSV
+                "px_mult": 1,
+                "fill_mode": "",  # leave empty to let code infer IOC/RETURN
+                "deviation": "",  # leave empty; CLI default (e.g., 50) will be used
+            }
+        )
 
     df = pd.DataFrame(rows)
     out = Path("config") / "contracts.csv"

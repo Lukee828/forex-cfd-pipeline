@@ -1,7 +1,6 @@
-import yaml, os
-from src.exec.backtest import main as backtest_main
+import os
 
-print('=== Smoke Test ===')
-print('Repo present:', os.listdir('.'))
-print('Loading config...')
+print("=== Smoke Test ===")
+print("Repo present:", os.listdir("."))
+print("Loading config...")
 print()

@@ -1,12 +1,14 @@
-
-import argparse, math, numpy as np, pandas as pd, os, sys
+import argparse
+import math
+import numpy as np
+import pandas as pd
+import os
 from pathlib import Path
 
 # ---------- Root helpers ----------
-from pathlib import Path
-import os
 
 PRESET_ROOT = r"C:\Users\speed\Desktop\Forex CFD's system"
+
 
 def detect_project_root(preset: str = PRESET_ROOT) -> Path:
     env = os.environ.get("PROJECT_ROOT")
@@ -15,6 +17,7 @@ def detect_project_root(preset: str = PRESET_ROOT) -> Path:
     if preset and Path(preset).exists():
         return Path(preset)
     return Path.cwd()
+
 
 def default_paths():
     ROOT = detect_project_root()
@@ -30,8 +33,8 @@ def default_paths():
 def _read_price_file(p: Path) -> pd.DataFrame:
     df = pd.read_parquet(p)
     if not isinstance(df.index, pd.DatetimeIndex):
-        if 'Date' in df.columns:
-            df = df.set_index(pd.to_datetime(df['Date'], utc=True, errors='coerce'))
+        if "Date" in df.columns:
+            df = df.set_index(pd.to_datetime(df["Date"], utc=True, errors="coerce"))
         else:
             raise ValueError(f"{p} must have DatetimeIndex or a Date column")
     if df.index.tz is None:
@@ -39,13 +42,14 @@ def _read_price_file(p: Path) -> pd.DataFrame:
     else:
         df.index = df.index.tz_convert("UTC")
     df = df.sort_index()
-    need = ['Open','High','Low','Close']
+    need = ["Open", "High", "Low", "Close"]
     for c in need:
         if c not in df.columns:
             raise ValueError(f"{p} missing column: {c}")
-    if 'Volume' not in df.columns:
-        df['Volume'] = 0.0
-    return df[["Open","High","Low","Close","Volume"]]
+    if "Volume" not in df.columns:
+        df["Volume"] = 0.0
+    return df[["Open", "High", "Low", "Close", "Volume"]]
+
 
 def _load_folder(folder: Path) -> dict:
     out = {}
@@ -56,27 +60,38 @@ def _load_folder(folder: Path) -> dict:
         raise SystemExit(f"No Parquet files under {folder}")
     return out
 
+
 def _load_costs_map(path_csv: Path, fallback=0.0005) -> dict:
     m = {}
     if path_csv and path_csv.exists():
         tb = pd.read_csv(path_csv)
         tb.columns = [c.strip().lower() for c in tb.columns]
-        symcol = 'symbol' if 'symbol' in tb.columns else None
+        symcol = "symbol" if "symbol" in tb.columns else None
         if symcol:
             for _, r in tb.iterrows():
-                s = str(r['symbol']).upper()
-                if {'entry_half_spread_bps','exit_half_spread_bps','entry_commission_per_million','exit_commission_per_million'}.issubset(tb.columns):
-                    e = (float(r.get('entry_half_spread_bps', 0))/10000.0) + (float(r.get('entry_commission_per_million', 0))/1_000_000.0)
-                    x = (float(r.get('exit_half_spread_bps', 0))/10000.0) + (float(r.get('exit_commission_per_million', 0))/1_000_000.0)
-                    m[s] = (e if e>0 else fallback, x if x>0 else fallback)
-                elif 'cost_perc' in tb.columns:
-                    c = float(r['cost_perc'])
-                    m[s] = (c if c>0 else fallback, c if c>0 else fallback)
+                s = str(r["symbol"]).upper()
+                if {
+                    "entry_half_spread_bps",
+                    "exit_half_spread_bps",
+                    "entry_commission_per_million",
+                    "exit_commission_per_million",
+                }.issubset(tb.columns):
+                    e = (float(r.get("entry_half_spread_bps", 0)) / 10000.0) + (
+                        float(r.get("entry_commission_per_million", 0)) / 1_000_000.0
+                    )
+                    x = (float(r.get("exit_half_spread_bps", 0)) / 10000.0) + (
+                        float(r.get("exit_commission_per_million", 0)) / 1_000_000.0
+                    )
+                    m[s] = (e if e > 0 else fallback, x if x > 0 else fallback)
+                elif "cost_perc" in tb.columns:
+                    c = float(r["cost_perc"])
+                    m[s] = (c if c > 0 else fallback, c if c > 0 else fallback)
     return m
 
+
 # ---------- Sleeves (self-contained) ----------
-def tsmom_signal(df: pd.DataFrame, lookbacks=(63,126,252)) -> pd.Series:
-    c = df['Close']
+def tsmom_signal(df: pd.DataFrame, lookbacks=(63, 126, 252)) -> pd.Series:
+    c = df["Close"]
     sigs = []
     for lb in lookbacks:
         s = np.sign(c / c.shift(lb) - 1.0)
@@ -84,7 +99,8 @@ def tsmom_signal(df: pd.DataFrame, lookbacks=(63,126,252)) -> pd.Series:
     v = pd.concat(sigs, axis=1).mean(axis=1)
     return v
 
-def xsec_mom_signals(panel: dict, lookbacks=(63,126,252)) -> dict:
+
+def xsec_mom_signals(panel: dict, lookbacks=(63, 126, 252)) -> dict:
     """
     Cross-sectional momentum (tz-safe & monotonic):
       - compute multi-horizon momentum score per symbol
@@ -92,7 +108,6 @@ def xsec_mom_signals(panel: dict, lookbacks=(63,126,252)) -> dict:
       - long top quartile, short bottom quartile
     """
     import pandas as pd
-    import numpy as np
 
     # unified tz-aware calendar
     idx_all = None
@@ -107,7 +122,7 @@ def xsec_mom_signals(panel: dict, lookbacks=(63,126,252)) -> dict:
     # multi-horizon scores per symbol (on each symbol's index, combined on idx_all)
     scores = {}
     for s, df in panel.items():
-        c = df['Close']
+        c = df["Close"]
         parts = [c.pct_change(lb) for lb in lookbacks]
         sc = pd.concat(parts, axis=1).mean(axis=1)
         # align to idx_all for clean slicing later
@@ -116,11 +131,13 @@ def xsec_mom_signals(panel: dict, lookbacks=(63,126,252)) -> dict:
     scores_df = pd.DataFrame(scores, index=idx_all)
 
     # calendar month-ends (tz-naive) -> make tz-aware, then snap to trading index
-    cal_me = (idx_all.tz_convert('UTC')
-          .tz_localize(None)
-          .to_period('M')
-          .to_timestamp('M')
-          .tz_localize('UTC'))
+    cal_me = (
+        idx_all.tz_convert("UTC")
+        .tz_localize(None)
+        .to_period("M")
+        .to_timestamp("M")
+        .tz_localize("UTC")
+    )
 
     cal_me = cal_me.unique().sort_values()
 
@@ -128,7 +145,7 @@ def xsec_mom_signals(panel: dict, lookbacks=(63,126,252)) -> dict:
     # returns None if there is no earlier ts (e.g., at the very start)
     def snap_left(ts):
         # position of the right insertion point minus 1
-        pos = idx_all.searchsorted(ts, side='right') - 1
+        pos = idx_all.searchsorted(ts, side="right") - 1
         return idx_all[pos] if pos >= 0 else None
 
     # collect sparse events, then build monotonic series per symbol
@@ -142,7 +159,7 @@ def xsec_mom_signals(panel: dict, lookbacks=(63,126,252)) -> dict:
         if row.isna().all():
             continue
 
-        ranks = row.rank(method='first', na_option='keep')
+        ranks = row.rank(method="first", na_option="keep")
         n = ranks.count()
         if n < 4:
             continue
@@ -163,7 +180,9 @@ def xsec_mom_signals(panel: dict, lookbacks=(63,126,252)) -> dict:
     for s in panel.keys():
         if events[s]:
             ts_list, val_list = zip(*events[s])
-            ser = pd.Series(val_list, index=pd.DatetimeIndex(ts_list, tz='UTC')).sort_index()
+            ser = pd.Series(
+                val_list, index=pd.DatetimeIndex(ts_list, tz="UTC")
+            ).sort_index()
             # if multiple events land on same ts, keep the last
             ser = ser.groupby(ser.index).last()
         else:
@@ -175,13 +194,13 @@ def xsec_mom_signals(panel: dict, lookbacks=(63,126,252)) -> dict:
     return out
 
 
-
 def meanrev_signal(df: pd.DataFrame, ma=20) -> pd.Series:
-    c = df['Close']
-    mu = c.rolling(ma, min_periods=max(5,ma//2)).mean()
-    sd = c.pct_change().rolling(ma, min_periods=max(5,ma//2)).std()
-    z = (c-mu) / (sd*mu + 1e-12)
+    c = df["Close"]
+    mu = c.rolling(ma, min_periods=max(5, ma // 2)).mean()
+    sd = c.pct_change().rolling(ma, min_periods=max(5, ma // 2)).std()
+    z = (c - mu) / (sd * mu + 1e-12)
     return -np.tanh(z)  # scale to [-1,1] and invert (mean reversion)
+
 
 def volcarry_xsec_signals(panel: dict, lookback=63, top_q=0.35, bot_q=0.35) -> dict:
     # lower vol -> long, higher vol -> short (carry proxy)
@@ -189,7 +208,13 @@ def volcarry_xsec_signals(panel: dict, lookback=63, top_q=0.35, bot_q=0.35) -> d
     for s, df in panel.items():
         idx_all = df.index if idx_all is None else idx_all.union(df.index)
     idx_all = idx_all.sort_values()
-    vols = {s: df['Close'].pct_change().rolling(lookback, min_periods=max(5,lookback//2)).std() for s, df in panel.items()}
+    vols = {
+        s: df["Close"]
+        .pct_change()
+        .rolling(lookback, min_periods=max(5, lookback // 2))
+        .std()
+        for s, df in panel.items()
+    }
     V = pd.DataFrame(vols).reindex(idx_all).ffill()
     out = {s: pd.Series(0.0, index=idx_all) for s in panel.keys()}
     for d, row in V.iterrows():
@@ -199,8 +224,8 @@ def volcarry_xsec_signals(panel: dict, lookback=63, top_q=0.35, bot_q=0.35) -> d
         n = ranks.count()
         if n < 4:
             continue
-        top_cut = ranks.quantile(top_q)       # long small vol (low rank)
-        bot_cut = ranks.quantile(1.0 - bot_q) # short big vol (high rank)
+        top_cut = ranks.quantile(top_q)  # long small vol (low rank)
+        bot_cut = ranks.quantile(1.0 - bot_q)  # short big vol (high rank)
         longs = ranks[ranks <= top_cut].index
         shorts = ranks[ranks >= bot_cut].index
         for s in longs:
@@ -211,18 +236,32 @@ def volcarry_xsec_signals(panel: dict, lookback=63, top_q=0.35, bot_q=0.35) -> d
         out[s] = out[s].replace(0, np.nan).ffill().fillna(0.0)
     return out
 
+
 # ---------- Risk / sim ----------
 def _atr(df: pd.DataFrame, n: int) -> pd.Series:
-    c = df['Close']
-    tr1 = (df['High']-df['Low']).abs()
-    tr2 = (df['High']-c.shift()).abs()
-    tr3 = (df['Low']-c.shift()).abs()
-    tr = pd.concat([tr1,tr2,tr3],axis=1).max(axis=1)
-    return tr.rolling(n, min_periods=max(5,n//2)).mean()
+    c = df["Close"]
+    tr1 = (df["High"] - df["Low"]).abs()
+    tr2 = (df["High"] - c.shift()).abs()
+    tr3 = (df["Low"] - c.shift()).abs()
+    tr = pd.concat([tr1, tr2, tr3], axis=1).max(axis=1)
+    return tr.rolling(n, min_periods=max(5, n // 2)).mean()
 
-def simulate(panel: dict, weights: dict, target_ann_vol=0.12, vol_lookback=20, max_leverage=3.0,
-             mtd_soft=-0.06, mtd_hard=-0.10, costs_map=None, default_cost=0.0005,
-             gap_atr_k=3.0, atr_map=None, vol_spike_mult=3.0, vol_med=None):
+
+def simulate(
+    panel: dict,
+    weights: dict,
+    target_ann_vol=0.12,
+    vol_lookback=20,
+    max_leverage=3.0,
+    mtd_soft=-0.06,
+    mtd_hard=-0.10,
+    costs_map=None,
+    default_cost=0.0005,
+    gap_atr_k=3.0,
+    atr_map=None,
+    vol_spike_mult=3.0,
+    vol_med=None,
+):
     symbols = sorted(panel.keys())
     # build unified calendar
     cal = None
@@ -231,23 +270,42 @@ def simulate(panel: dict, weights: dict, target_ann_vol=0.12, vol_lookback=20, m
         cal = idx if cal is None else cal.intersection(idx)
     cal = cal.sort_values()
     # vol estimates
-    vol_est = {s: panel[s]['Close'].pct_change().rolling(vol_lookback, min_periods=max(5,vol_lookback//2)).std()*math.sqrt(252.0) for s in symbols}
-    leg_cost = {s: costs_map.get(s, (default_cost, default_cost)) if costs_map else (default_cost, default_cost) for s in symbols}
+    vol_est = {
+        s: panel[s]["Close"]
+        .pct_change()
+        .rolling(vol_lookback, min_periods=max(5, vol_lookback // 2))
+        .std()
+        * math.sqrt(252.0)
+        for s in symbols
+    }
+    leg_cost = {
+        s: (
+            costs_map.get(s, (default_cost, default_cost))
+            if costs_map
+            else (default_cost, default_cost)
+        )
+        for s in symbols
+    }
     # signals
     tsm = {s: tsmom_signal(panel[s]) for s in symbols}
     xsm = xsec_mom_signals(panel)
     mrv = {s: meanrev_signal(panel[s]) for s in symbols}
-    vcr = volcarry_xsec_signals(panel, lookback=max(20,int(vol_lookback*3)), top_q=0.35, bot_q=0.35)
+    vcr = volcarry_xsec_signals(
+        panel, lookback=max(20, int(vol_lookback * 3)), top_q=0.35, bot_q=0.35
+    )
 
     # combine
     comb = {}
     for s in symbols:
         idx = panel[s].index
-        v = (tsm[s].reindex(idx, method='ffill').fillna(0.0) * weights.get('tsmom',1.0) +
-             xsm[s].reindex(idx, method='ffill').fillna(0.0) * weights.get('xsec',0.8) +
-             mrv[s].reindex(idx, method='ffill').fillna(0.0) * weights.get('mr',0.6) +
-             vcr[s].reindex(idx, method='ffill').fillna(0.0) * weights.get('volcarry',0.4))
-        comb[s] = np.sign(v).replace(0,0.0)
+        v = (
+            tsm[s].reindex(idx, method="ffill").fillna(0.0) * weights.get("tsmom", 1.0)
+            + xsm[s].reindex(idx, method="ffill").fillna(0.0) * weights.get("xsec", 0.8)
+            + mrv[s].reindex(idx, method="ffill").fillna(0.0) * weights.get("mr", 0.6)
+            + vcr[s].reindex(idx, method="ffill").fillna(0.0)
+            * weights.get("volcarry", 0.4)
+        )
+        comb[s] = np.sign(v).replace(0, 0.0)
 
     pos = {s: 0 for s in symbols}
     entry = {s: None for s in symbols}
@@ -259,20 +317,20 @@ def simulate(panel: dict, weights: dict, target_ann_vol=0.12, vol_lookback=20, m
     current_m = None
 
     for i, d in enumerate(cal[:-1]):
-        nd = cal[i+1]
+        nd = cal[i + 1]
         mkey = (d.year, d.month)
         if mkey != current_m:
             current_m = mkey
             mtd_peak = port_eq
         mtd_peak = max(mtd_peak, port_eq)
-        mtd_dd = port_eq/mtd_peak - 1.0
+        mtd_dd = port_eq / mtd_peak - 1.0
         gate = 0.0 if mtd_dd <= mtd_hard else (0.5 if mtd_dd <= mtd_soft else 1.0)
 
         for s in symbols:
             df = panel[s]
             if d not in df.index or nd not in df.index:
                 continue
-            open_next = float(df.loc[nd,'Open'])
+            open_next = float(df.loc[nd, "Open"])
             signal = float(comb[s].get(d, 0.0))
 
             # exits
@@ -280,49 +338,80 @@ def simulate(panel: dict, weights: dict, target_ann_vol=0.12, vol_lookback=20, m
                 # flip or zero signal -> exit
                 if signal * pos[s] <= 0:
                     e_d, e_px, e_side, lev = entry[s]
-                    ret = (open_next/e_px - 1.0) * e_side
-                    eq[s] *= (1.0 + lev * ret)
+                    ret = (open_next / e_px - 1.0) * e_side
+                    eq[s] *= 1.0 + lev * ret
                     eq[s] -= eq[s] * leg_cost[s][1]
-                    rows_tr.append(dict(symbol=s, entry_time=e_d, exit_time=nd,
-                                        side=('long' if e_side>0 else 'short'),
-                                        entry_px=e_px, exit_px=open_next, leverage=lev,
-                                        ret_gross=ret*lev))
-                    pos[s]=0; entry[s]=None
+                    rows_tr.append(
+                        dict(
+                            symbol=s,
+                            entry_time=e_d,
+                            exit_time=nd,
+                            side=("long" if e_side > 0 else "short"),
+                            entry_px=e_px,
+                            exit_px=open_next,
+                            leverage=lev,
+                            ret_gross=ret * lev,
+                        )
+                    )
+                    pos[s] = 0
+                    entry[s] = None
 
             # entries (or re-entries after exit)
-            if pos[s]==0 and signal!=0 and gate>0.0:
+            if pos[s] == 0 and signal != 0 and gate > 0.0:
                 volh = float(vol_est[s].get(d, np.nan))
-                lev = min(max_leverage, (target_ann_vol/volh if (not np.isnan(volh) and volh>0) else 0.0)) * gate
+                lev = (
+                    min(
+                        max_leverage,
+                        (
+                            target_ann_vol / volh
+                            if (not np.isnan(volh) and volh > 0)
+                            else 0.0
+                        ),
+                    )
+                    * gate
+                )
                 # sanity guards
-                if lev>0.0 and atr_map and s in atr_map:
-                    prev_close = float(df.loc[d,'Close'])
+                if lev > 0.0 and atr_map and s in atr_map:
+                    prev_close = float(df.loc[d, "Close"])
                     atr_prev = float(atr_map[s].get(d, np.nan))
-                    if not np.isnan(atr_prev) and atr_prev>0 and abs(open_next - prev_close) > gap_atr_k*atr_prev:
+                    if (
+                        not np.isnan(atr_prev)
+                        and atr_prev > 0
+                        and abs(open_next - prev_close) > gap_atr_k * atr_prev
+                    ):
                         lev = 0.0
-                if lev>0.0 and vol_med and s in vol_med:
+                if lev > 0.0 and vol_med and s in vol_med:
                     vm = float(vol_med[s].get(d, np.nan))
-                    if not np.isnan(vm) and vm>0 and not np.isnan(volh) and volh > vol_spike_mult*vm:
+                    if (
+                        not np.isnan(vm)
+                        and vm > 0
+                        and not np.isnan(volh)
+                        and volh > vol_spike_mult * vm
+                    ):
                         lev = 0.0
-                if lev>0.0:
+                if lev > 0.0:
                     pos[s] = int(np.sign(signal))
                     entry[s] = (nd, open_next, pos[s], lev)
-                    eq[s] -= eq[s]*leg_cost[s][0]
+                    eq[s] -= eq[s] * leg_cost[s][0]
 
         # mark to market equity at next d
         for s in symbols:
             rows_eq.append((nd, s, eq[s]))
         port_eq = float(np.mean(list(eq.values())))
 
-    eq_df = pd.DataFrame(rows_eq, columns=['ts','symbol','equity']).set_index('ts')
+    eq_df = pd.DataFrame(rows_eq, columns=["ts", "symbol", "equity"]).set_index("ts")
     merged = None
     for s in symbols:
-        sub = eq_df[eq_df['symbol']==s][['equity']].rename(columns={'equity':f'equity_{s}'})
-        merged = sub if merged is None else merged.join(sub, how='outer')
+        sub = eq_df[eq_df["symbol"] == s][["equity"]].rename(
+            columns={"equity": f"equity_{s}"}
+        )
+        merged = sub if merged is None else merged.join(sub, how="outer")
     merged = merged.sort_index().ffill().fillna(1.0)
-    merged['portfolio_equity'] = merged.filter(like='equity_').mean(axis=1)
+    merged["portfolio_equity"] = merged.filter(like="equity_").mean(axis=1)
 
     trades = pd.DataFrame(rows_tr)
     return merged, trades
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -339,7 +428,9 @@ def main():
     ap.add_argument("--w_xsec", type=float, default=0.8)
     ap.add_argument("--w_mr", type=float, default=0.6)
     ap.add_argument("--w_volcarry", type=float, default=0.4)
-    ap.add_argument("--volcarry_top_q", type=float, default=0.35)   # (kept for CLI compatibility, used inside sim default)
+    ap.add_argument(
+        "--volcarry_top_q", type=float, default=0.35
+    )  # (kept for CLI compatibility, used inside sim default)
     ap.add_argument("--volcarry_bot_q", type=float, default=0.35)
     ap.add_argument("--volcarry_lookback", type=int, default=63)
     ap.add_argument("--gap_atr_k", type=float, default=3.0)
@@ -348,11 +439,15 @@ def main():
     ap.add_argument("--vol_spike_window", type=int, default=60)
     ap.add_argument("--nav", type=float, default=1_000_000.0)
     # added
-    ap.add_argument("--out_prefix", type=str, default="pnl_demo",
-                help="Prefix for output CSVs (e.g., IS_candidate, OOS_candidate)")
+    ap.add_argument(
+        "--out_prefix",
+        type=str,
+        default="pnl_demo",
+        help="Prefix for output CSVs (e.g., IS_candidate, OOS_candidate)",
+    )
 
     ap.add_argument("--start", default=None, help="YYYY-MM-DD (UTC)")
-    ap.add_argument("--end",   default=None, help="YYYY-MM-DD (UTC)")
+    ap.add_argument("--end", default=None, help="YYYY-MM-DD (UTC)")
     args = ap.parse_args()
 
     ROOT, DEF_FOLDER, DEF_CFG, DEF_COSTS = default_paths()
@@ -366,8 +461,9 @@ def main():
     # Date filtering (tz-safe, single-pass)
     if args.start or args.end:
         import pandas as pd
+
         start_ts = pd.Timestamp(args.start, tz="UTC") if args.start else None
-        end_ts   = pd.Timestamp(args.end,   tz="UTC") if args.end   else None
+        end_ts = pd.Timestamp(args.end, tz="UTC") if args.end else None
 
         for s, df in list(panel.items()):
             idx = df.index
@@ -385,18 +481,36 @@ def main():
 
         if not panel:
             raise SystemExit("No data left after date filtering.")
-    
+
     costs_map = _load_costs_map(costs_csv, fallback=args.cost_perc)
     atr_map = {s: _atr(df, args.atr_lookback) for s, df in panel.items()}
-    vol_med = {s: df['Close'].pct_change().rolling(args.vol_spike_window, min_periods=max(5,args.vol_spike_window//2)).std()*math.sqrt(252.0)
-               for s, df in panel.items()}
+    vol_med = {
+        s: df["Close"]
+        .pct_change()
+        .rolling(args.vol_spike_window, min_periods=max(5, args.vol_spike_window // 2))
+        .std()
+        * math.sqrt(252.0)
+        for s, df in panel.items()
+    }
 
-    weights = dict(tsmom=args.w_tsmom, xsec=args.w_xsec, mr=args.w_mr, volcarry=args.w_volcarry)
-    eq, trades = simulate(panel, weights,
-                          target_ann_vol=args.target_ann_vol, vol_lookback=args.vol_lookback, max_leverage=args.max_leverage,
-                          mtd_soft=args.mtd_soft, mtd_hard=args.mtd_hard, costs_map=costs_map, default_cost=args.cost_perc,
-                          gap_atr_k=args.gap_atr_k, atr_map=atr_map, vol_spike_mult=args.vol_spike_mult, vol_med=vol_med)
-    
+    weights = dict(
+        tsmom=args.w_tsmom, xsec=args.w_xsec, mr=args.w_mr, volcarry=args.w_volcarry
+    )
+    eq, trades = simulate(
+        panel,
+        weights,
+        target_ann_vol=args.target_ann_vol,
+        vol_lookback=args.vol_lookback,
+        max_leverage=args.max_leverage,
+        mtd_soft=args.mtd_soft,
+        mtd_hard=args.mtd_hard,
+        costs_map=costs_map,
+        default_cost=args.cost_perc,
+        gap_atr_k=args.gap_atr_k,
+        atr_map=atr_map,
+        vol_spike_mult=args.vol_spike_mult,
+        vol_med=vol_med,
+    )
 
     Path("data").mkdir(exist_ok=True)
     prefix = args.out_prefix or "pnl_demo"
@@ -404,11 +518,13 @@ def main():
     if len(trades):
         trades.to_csv(f"data/{prefix}_trades.csv", index=False)
     # attribution placeholder (always write for consistency)
-    pd.DataFrame(columns=["exit_time","symbol","sleeve","pnl"]).to_csv(f"data/{prefix}_attrib_sleeve.csv", index=False)
+    pd.DataFrame(columns=["exit_time", "symbol", "sleeve", "pnl"]).to_csv(
+        f"data/{prefix}_attrib_sleeve.csv", index=False
+    )
     print(f"Saved equity to data/{prefix}_equity.csv")
     print(f"Saved trades to data/{prefix}_trades.csv")
-    
-        # === Save positions snapshot (end of backtest) ===
+
+    # === Save positions snapshot (end of backtest) ===
     try:
         import pandas as pd
         from datetime import datetime, timezone
@@ -420,8 +536,11 @@ def main():
         else:
             last_ts = last_ts.tz_convert("UTC")
 
-        pos = trades.sort_values(["symbol", "exit_time"]) \
-                    .groupby("symbol", as_index=False).tail(1)
+        pos = (
+            trades.sort_values(["symbol", "exit_time"])
+            .groupby("symbol", as_index=False)
+            .tail(1)
+        )
 
         # try position column directly
         if "position" in pos.columns:
@@ -445,15 +564,16 @@ def main():
     except Exception as e:
         print("WARN: could not save positions snapshot:", e)
 
-
     start, end = eq.index.min(), eq.index.max()
-    cumret = float(eq['portfolio_equity'].iloc[-1] - 1.0)
+    cumret = float(eq["portfolio_equity"].iloc[-1] - 1.0)
     nsyms = len([c for c in eq.columns if c.startswith("equity_")])
     print(f"Backtest period: {start.date()} -> {end.date()} | Symbols: {nsyms}")
     print(f"Portfolio cum return (after costs): {cumret:.2%}")
     print(f"Final equity: {eq['portfolio_equity'].iloc[-1]:.4f}")
     print("Saved equity to data/pnl_demo_equity.csv")
-    if len(trades): print("Saved trades to data/pnl_demo_trades.csv")
+    if len(trades):
+        print("Saved trades to data/pnl_demo_trades.csv")
+
 
 if __name__ == "__main__":
     main()

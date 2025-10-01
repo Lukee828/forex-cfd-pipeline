@@ -1,7 +1,8 @@
 from typing import List
 from ..sleeves.base import OrderIntent
 
-def to_net(intents: List[OrderIntent])->List[OrderIntent]:
+
+def to_net(intents: List[OrderIntent]) -> List[OrderIntent]:
     # Sort by time then priority desc; keep last per (ts,symbol)
     intents = sorted(intents, key=lambda x: (x.ts_utc, -x.priority))
     out = []

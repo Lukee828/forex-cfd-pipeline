@@ -1,7 +1,5 @@
-
-import argparse, yaml, pandas as pd, numpy as np, os
-
 # ... rest of imports and code above ...
+
 
 def safe_print_summary(merged):
     start = merged.index.min()
@@ -12,6 +10,7 @@ def safe_print_summary(merged):
     print(f"Portfolio cum return (after costs): {cumret:.2%}")
     print(f"Final equity: {merged['portfolio_equity'].iloc[-1]:.4f}")
     print("Saved equity to data/pnl_demo_equity.csv")
+
 
 # At the bottom of your main(), replace the old block with:
 # safe_print_summary(merged)

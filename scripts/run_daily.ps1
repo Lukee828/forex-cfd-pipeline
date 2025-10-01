@@ -22,4 +22,3 @@ Set-Location $ProjectRoot
 
 Get-ChildItem "$ProjectRoot\logs\*.log" | Sort LastWriteTime -Descending | Select -Skip 14 | Remove-Item -Force -ErrorAction SilentlyContinue
 Get-ChildItem "$ProjectRoot\executions\reconcile_*.csv" | Sort LastWriteTime -Descending | Select -Skip 30 | Remove-Item -Force -ErrorAction SilentlyContinue
-

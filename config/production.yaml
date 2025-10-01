@@ -72,3 +72,20 @@ holidays:
 verify:
   mt5_ticks: true
   mt5_positions: true
+
+signals:
+  enable:
+    TF: true
+    MR: false
+    VOL: false
+  params:
+    TF:
+      lookback: 50
+      order_size: 0.1
+    MR:
+      z_entry: 1.0
+      lookback: 20
+      order_size: 0.05
+    VOL:
+      lookback: 30
+      order_size: 0.05

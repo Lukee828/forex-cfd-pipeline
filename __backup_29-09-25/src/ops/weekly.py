@@ -1,2 +1,2 @@
 def run():
-    print('Weekly ops placeholder')
+    print("Weekly ops placeholder")

@@ -12,6 +12,7 @@ Usage:
 
 It calls the same normalization/resampling helpers as the dukascopy_downloader module.
 """
+
 import argparse
 import pandas as pd
 import pathlib
@@ -19,18 +20,23 @@ import re
 from .dukascopy_downloader import _normalize, _resample, _save_parquet
 
 TF_MAP = {
-    "1m":"1m","m1":"1m",
-    "5m":"5m","m5":"5m",
-    "1h":"1h","h1":"1h",
-    "1d":"1d","d1":"1d"
+    "1m": "1m",
+    "m1": "1m",
+    "5m": "5m",
+    "m5": "5m",
+    "1h": "1h",
+    "h1": "1h",
+    "1d": "1d",
+    "d1": "1d",
 }
+
 
 def infer_symbol_and_tf(path: pathlib.Path, default_tf: str) -> tuple[str, str]:
     name = path.name.lower()
     # Infer tf from filename tokens
     tf = None
     for token, tfv in TF_MAP.items():
-        if re.search(rf'(^|[^a-z0-9]){token}([^a-z0-9]|$)', name):
+        if re.search(rf"(^|[^a-z0-9]){token}([^a-z0-9]|$)", name):
             tf = tfv
             break
     if tf is None:
@@ -38,15 +44,18 @@ def infer_symbol_and_tf(path: pathlib.Path, default_tf: str) -> tuple[str, str]:
 
     # Infer symbol: filename prefix before first '_' or '-', else parent folder
     symbol = None
-    m = re.match(r'^([a-z0-9]+)[\-_]', name)
+    m = re.match(r"^([a-z0-9]+)[\-_]", name)
     if m:
         symbol = m.group(1).upper()
     else:
         symbol = path.parent.name.upper()
-    symbol = symbol.replace('.CSV','').upper()
+    symbol = symbol.replace(".CSV", "").upper()
     return symbol, tf
 
-def ingest_file(csv_path: pathlib.Path, out_root: pathlib.Path, default_tf: str = "1h")->str:
+
+def ingest_file(
+    csv_path: pathlib.Path, out_root: pathlib.Path, default_tf: str = "1h"
+) -> str:
     symbol, tf = infer_symbol_and_tf(csv_path, default_tf)
     # Load
     df = pd.read_csv(csv_path, parse_dates=["Date"])
@@ -60,11 +69,16 @@ def ingest_file(csv_path: pathlib.Path, out_root: pathlib.Path, default_tf: str 
     _save_parquet(df, str(out_path))
     return str(out_path)
 
+
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--src", required=True, help="Root folder with CSVs (recursively scanned)")
-    ap.add_argument("--out", default="data", help="Output root (will create prices_<tf>/)")
-    ap.add_argument("--default-tf", default="1h", choices=["1m","5m","1h","1d"])
+    ap.add_argument(
+        "--src", required=True, help="Root folder with CSVs (recursively scanned)"
+    )
+    ap.add_argument(
+        "--out", default="data", help="Output root (will create prices_<tf>/)"
+    )
+    ap.add_argument("--default-tf", default="1h", choices=["1m", "5m", "1h", "1d"])
     args = ap.parse_args()
 
     src = pathlib.Path(args.src)
@@ -85,6 +99,7 @@ def main():
             print(f"[WARN] Failed {f}: {e}")
     print(f"Done. Wrote {len(written)} Parquet files.")
     return 0
+
 
 if __name__ == "__main__":
     raise SystemExit(main())

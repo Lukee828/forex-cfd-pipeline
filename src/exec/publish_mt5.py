@@ -15,7 +15,6 @@ from __future__ import annotations
 
 import os
 import sys
-import math
 import argparse
 from pathlib import Path
 from datetime import datetime
@@ -35,6 +34,7 @@ except Exception as ex:  # pragma: no cover
 # Helpers
 # -----------------------------
 
+
 def _step_decimals(step: float) -> int:
     s = f"{step:.10f}".rstrip("0").rstrip(".")
     if "." in s:
@@ -42,7 +42,9 @@ def _step_decimals(step: float) -> int:
     return 0
 
 
-def normalize_volume(vol: float, lot_step: float, lot_min: float, lot_max: float) -> float:
+def normalize_volume(
+    vol: float, lot_step: float, lot_min: float, lot_max: float
+) -> float:
     """
     Round DOWN to step, clamp to [0, lot_max]. Return 0.0 if < lot_min after rounding.
     """
@@ -69,7 +71,9 @@ def infer_fill_pref(symbol: str, csv_fill_mode: Optional[int]) -> List[Optional[
         base = [int(csv_fill_mode)]
     else:
         # FX pairs (6 letters) and popular metals: prefer IOC first.
-        if sym.startswith("XA") or (len(sym) == 6 and sym[:3].isalpha() and sym[3:].isalpha()):
+        if sym.startswith("XA") or (
+            len(sym) == 6 and sym[:3].isalpha() and sym[3:].isalpha()
+        ):
             base = [1, 0, 2]  # IOC, RETURN, FOK
         else:
             base = [0, 1, 2]  # Indices/CFDs often OK with RETURN
@@ -98,6 +102,7 @@ def _as_float(x, default=None) -> Optional[float]:
 # Core
 # -----------------------------
 
+
 def load_orders(path: Path) -> pd.DataFrame:
     if not path.exists():
         print(f"ERR: orders file not found: {path}", file=sys.stderr)
@@ -105,7 +110,10 @@ def load_orders(path: Path) -> pd.DataFrame:
     orders = pd.read_csv(path)
     need = {"symbol", "px", "lots"}
     if not need.issubset({c.lower() for c in orders.columns} | set(orders.columns)):
-        print("ERR: orders.csv must contain columns: symbol,target_position,px,lots", file=sys.stderr)
+        print(
+            "ERR: orders.csv must contain columns: symbol,target_position,px,lots",
+            file=sys.stderr,
+        )
         sys.exit(1)
     # Normalize column names
     cols = {c: c.lower() for c in orders.columns}
@@ -115,14 +123,25 @@ def load_orders(path: Path) -> pd.DataFrame:
 
 def load_contracts(path: Path) -> pd.DataFrame:
     if not path.exists():
-        print(f"WARN: contracts file not found: {path}. Proceeding with defaults.", file=sys.stderr)
+        print(
+            f"WARN: contracts file not found: {path}. Proceeding with defaults.",
+            file=sys.stderr,
+        )
         return pd.DataFrame()
     c = pd.read_csv(path)
     # normalize names
     cols = {cname: cname.lower() for cname in c.columns}
     c = c.rename(columns=cols)
     # expected columns if present
-    for col in ["symbol", "mt5_symbol", "lot_min", "lot_step", "lot_max", "deviation", "fill_mode"]:
+    for col in [
+        "symbol",
+        "mt5_symbol",
+        "lot_min",
+        "lot_step",
+        "lot_max",
+        "deviation",
+        "fill_mode",
+    ]:
         if col not in c.columns:
             c[col] = pd.NA
     return c
@@ -140,11 +159,15 @@ def mt5_init_or_die() -> None:
     if not ok:
         print(f"[MT5] initialize failed: {mt5.last_error()}", file=sys.stderr)
         sys.exit(3)
-    ti = mt5.terminal_info()
-    print(f"[MT5] initialized (dry_run={False}; login={(login and '(env)') or '(terminal)'} server={(server or '(terminal)')} )")
+    _ = mt5.terminal_info()
+    print(
+        f"[MT5] initialized (dry_run={False}; login={(login and '(env)') or '(terminal)'} server={(server or '(terminal)')} )"
+    )
 
 
-def build_preview_and_requests(orders: pd.DataFrame, contracts: pd.DataFrame, cli_dev: int) -> tuple[pd.DataFrame, List[Dict[str, Any]]]:
+def build_preview_and_requests(
+    orders: pd.DataFrame, contracts: pd.DataFrame, cli_dev: int
+) -> tuple[pd.DataFrame, List[Dict[str, Any]]]:
     merged = orders.copy()
     # Join on symbol if contracts present, prefer mt5_symbol when given
     if not contracts.empty:
@@ -164,7 +187,9 @@ def build_preview_and_requests(orders: pd.DataFrame, contracts: pd.DataFrame, cl
     merged["deviation"] = merged["deviation"].fillna(cli_dev)
 
     # Side from lots sign, use abs value for normalization
-    merged["side"] = merged["lots"].apply(lambda x: "SELL" if float(x) < 0 else ("BUY" if float(x) > 0 else "FLAT"))
+    merged["side"] = merged["lots"].apply(
+        lambda x: "SELL" if float(x) < 0 else ("BUY" if float(x) > 0 else "FLAT")
+    )
     merged["lots_abs"] = merged["lots"].abs().astype(float)
 
     # Normalize volumes
@@ -207,9 +232,18 @@ def build_preview_and_requests(orders: pd.DataFrame, contracts: pd.DataFrame, cl
         to_send.append(req)
 
     # Preview table
-    preview = merged[[
-        "symbol", "mt5_symbol", "side", "volume", "px", "lot_min", "lot_step", "lot_max"
-    ]].rename(columns={"px": "price_used", "symbol": "sym_in"})
+    preview = merged[
+        [
+            "symbol",
+            "mt5_symbol",
+            "side",
+            "volume",
+            "px",
+            "lot_min",
+            "lot_step",
+            "lot_max",
+        ]
+    ].rename(columns={"px": "price_used", "symbol": "sym_in"})
 
     return preview, to_send
 
@@ -239,7 +273,9 @@ def send_orders(requests: List[Dict[str, Any]]) -> Dict[str, str]:
                 req["type_filling"] = fm
 
             res = mt5.order_send(req)
-            tried.append((fm, getattr(res, "retcode", None), getattr(res, "comment", None)))
+            tried.append(
+                (fm, getattr(res, "retcode", None), getattr(res, "comment", None))
+            )
 
             if getattr(res, "retcode", None) == mt5.TRADE_RETCODE_DONE:  # 10009
                 sent = True
@@ -256,12 +292,18 @@ def send_orders(requests: List[Dict[str, Any]]) -> Dict[str, str]:
 # CLI
 # -----------------------------
 
+
 def parse_args(argv: Optional[List[str]] = None) -> argparse.Namespace:
     p = argparse.ArgumentParser(description="Publish orders to MT5")
     p.add_argument("--orders_csv", required=True, help="orders.csv path")
     p.add_argument("--contracts_csv", required=True, help="contracts.csv path")
     p.add_argument("--dry_run", default="true", help="true/false (default true)")
-    p.add_argument("--deviation", type=int, default=50, help="Default slippage (points) if not set per symbol")
+    p.add_argument(
+        "--deviation",
+        type=int,
+        default=50,
+        help="Default slippage (points) if not set per symbol",
+    )
     return p.parse_args(argv)
 
 
