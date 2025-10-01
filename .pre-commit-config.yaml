@@ -3,21 +3,24 @@ repos:
     rev: 25.9.0
     hooks:
       - id: black
+
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.13.2
     hooks:
       - id: ruff
         alias: ruff (legacy alias)
+
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
       - id: end-of-file-fixer
       - id: trailing-whitespace
+
   - repo: local
     hooks:
       - id: pytest
-        name: pytest
-        entry: pytest
+        name: pytest with coverage
+        entry: pytest --maxfail=1 --disable-warnings -q --cov=src --cov-report=term-missing
         language: system
         types: [python]
         pass_filenames: false
