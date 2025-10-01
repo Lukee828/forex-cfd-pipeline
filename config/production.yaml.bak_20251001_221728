@@ -2,43 +2,52 @@ universe:
   folder: data/prices_1d
   costs_csv: data/costs_per_symbol.csv
   lookback_years: 5
+
 risk:
-  target_ann_vol: 0.1
+  target_ann_vol: 0.10
   vol_lookback: 30
   max_leverage: 2.0
+
 weights:
   tsmom: 1.0
   xsec: 0.8
   mr: 0.6
   volcarry: 0.0
+
 volcarry:
   top_q: 0.25
   bot_q: 0.25
   lookback: 42
+
 mtd_gates:
   soft: -0.06
-  hard: -0.1
+  hard: -0.10
+
 trade_sanity:
   gap_atr_k: 3.0
   atr_lookback: 14
   vol_spike_mult: 3.0
   vol_spike_window: 60
+
 output:
   positions_csv: signals/positions.csv
   out_prefix_base: DAILY
+
 orders:
   enabled: true
   contracts_csv: config/contracts.csv
   out_csv: signals/orders.csv
   nav: 1000000
-  gross_cap: 0.2
-  max_price_age_days: 7
-  skip_stale: true
-  max_dev_bps: 1200
+  gross_cap: 0.20
+  max_price_age_days: 7       # single source of truth
+  skip_stale: true            # don't fail the whole run on one stale symbol
+  max_dev_bps: 1200           # warn if MT5 mid deviates too far from ref*px_mult
+
 execution:
   enabled: true
   broker: mt5
   dry_run: false
+
   mt5:
     login: ${MT5_LOGIN}
     password: ${MT5_PASSWORD}
@@ -48,17 +57,22 @@ execution:
     staleness_max_days: 3
     max_order_volume: 0.5
     throttle_ms: 300
+
   max_lot:
     EURUSD: 2.0
     XAUUSD: 0.5
+
   alias:
     US500: US500.cash
+
 holidays:
-- '2025-12-25'
-- '2026-01-01'
+  - '2025-12-25'
+  - '2026-01-01'
+
 verify:
   mt5_ticks: true
   mt5_positions: true
+
 signals:
   enable:
     TF: true
@@ -75,9 +89,3 @@ signals:
     VOL:
       lookback: 30
       order_size: 0.05
-symbols:
-  core:
-  - EURUSD
-  - GBPUSD
-  - USDJPY
-  satellite: []

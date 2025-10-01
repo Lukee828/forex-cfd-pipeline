@@ -36,3 +36,6 @@ reports/
 notebooks/
 
 .precommit_cache/
+
+.tmp_fix_cfg.py
+config/production.yaml.bak_*
