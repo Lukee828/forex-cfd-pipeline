@@ -1,7 +1,10 @@
 # src/exec/reconcile.py
-import argparse, pandas as pd
+import argparse
+import pandas as pd
 from pathlib import Path
+
 # import your chosen broker reader (e.g., mt5 or ib_insync) and reuse mapping from publisher
+
 
 def main():
     ap = argparse.ArgumentParser()
@@ -13,10 +16,11 @@ def main():
     # TODO: read live positions into dict: live[symbol] = qty
     live = {}  # fill me
     df = pd.DataFrame({"target": target, "live": pd.Series(live)})
-    df["diff"] = (df["live"].fillna(0) - df["target"].fillna(0))
+    df["diff"] = df["live"].fillna(0) - df["target"].fillna(0)
     Path(args.out_csv).parent.mkdir(parents=True, exist_ok=True)
     df.to_csv(args.out_csv)
     print("Saved", args.out_csv)
+
 
 if __name__ == "__main__":
     main()

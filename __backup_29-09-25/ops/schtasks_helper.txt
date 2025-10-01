@@ -1,2 +1,0 @@
-\
-schtasks /Create /SC DAILY /TN "QuantDailyRun" /TR "\"C:\Users\speed\Desktop\Forex CFD's system\ops\daily_run.bat\"" /ST 08:15

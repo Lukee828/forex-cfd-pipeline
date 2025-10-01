@@ -1,16 +1,17 @@
 import pandas as pd
 import numpy as np
 
+
 def signals_daily(df: pd.DataFrame, z_in=1.5, z_out=0.5, ttl=10) -> pd.Series:
     """
     df: daily with Close; returns side series (+1/-1/0)
     Entry when |z| >= z_in; Exit to flat when |z| < z_out or ttl bars.
     """
-    px = df['Close']
+    px = df["Close"]
     ma = px.rolling(20, min_periods=10).mean()
     ret = px.pct_change()
     sd = ret.rolling(20, min_periods=10).std().replace(0, np.nan)
-    z = (px/ma - 1.0) / sd
+    z = (px / ma - 1.0) / sd
 
     side = pd.Series(0, index=df.index, dtype=float)
     dirn = 0

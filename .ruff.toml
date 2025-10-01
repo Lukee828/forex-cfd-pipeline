@@ -1,0 +1,17 @@
+line-length = 140
+target-version = "py311"
+
+# Top-level keys (not under [lint])
+exclude = [
+  ".precommit_cache",
+  "__backup_*",
+  "__backup*",
+  "notebooks",
+  "reports",
+  "runs",
+  "data",
+]
+
+[lint]
+select = ["E", "F", "W"]
+ignore = []

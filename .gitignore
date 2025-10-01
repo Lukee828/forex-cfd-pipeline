@@ -29,3 +29,13 @@ config/*.secrets.*
 config/local.*
 # keep canonical config csvs
 !config/*.csv
+
+
+__backup_*/
+reports/
+notebooks/
+
+.precommit_cache/
+
+.tmp_fix_cfg.py
+config/production.yaml.bak_*

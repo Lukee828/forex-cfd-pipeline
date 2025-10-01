@@ -4,6 +4,7 @@ import yaml
 
 _pattern = re.compile(r".*?\${(\w+)}.*?")
 
+
 def _replace_env_vars(obj):
     """Recursively replace ${VAR} with os.environ['VAR'] if present."""
     if isinstance(obj, str):
@@ -18,6 +19,7 @@ def _replace_env_vars(obj):
         return {k: _replace_env_vars(v) for k, v in obj.items()}
     else:
         return obj
+
 
 def load_yaml_with_env(path):
     with open(path, "r", encoding="utf-8") as f:
