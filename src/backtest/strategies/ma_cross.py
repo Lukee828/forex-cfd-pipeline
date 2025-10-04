@@ -1,38 +1,49 @@
-from typing import Dict, List
+from typing import List, Dict, Optional
 import pandas as pd
-from ..events import MarketEvent, SignalEvent
-from ..strategy.base import Strategy
 
 
-class MovingAverageCross(Strategy):
-    def __init__(self, short: int = 20, long: int = 50):
-        if short >= long:
-            raise ValueError("short < long required")
-        self.short = short
-        self.long = long
-        self.hist: Dict[str, pd.DataFrame] = {}  # symbol -> df with 'Close'
+class MACrossStrategy:
+    """
+    Moving-average cross, safe for fast < slow.
+    on_bar(window, i) returns a dict with a generic "signal" AND per-symbol entries.
+    """
 
-    def on_market(self, ev: MarketEvent) -> List[SignalEvent]:
-        out: List[SignalEvent] = []
-        ts = ev.ts
-        for sym, bar in ev.ohlcv_by_sym.items():
-            df = self.hist.setdefault(sym, pd.DataFrame(columns=["Close"]))
-            df.loc[ts, "Close"] = bar["Close"]
-            if len(df) >= self.long:
-                s_ma = df["Close"].rolling(self.short).mean().iloc[-1]
-                l_ma = df["Close"].rolling(self.long).mean().iloc[-1]
-                if pd.notna(s_ma) and pd.notna(l_ma):
-                    if s_ma > l_ma:
-                        out.append(
-                            SignalEvent(
-                                ts=ts, symbol=sym, direction="LONG", strength=1.0
-                            )
-                        )
-                    elif s_ma < l_ma:
-                        out.append(
-                            SignalEvent(
-                                ts=ts, symbol=sym, direction="SHORT", strength=1.0
-                            )
-                        )
-                    # else equal -> no signal
+    def __init__(
+        self,
+        symbols: Optional[List[str]] = None,
+        fast: int = 10,
+        slow: int = 50,
+        **kwargs
+    ):
+        self.symbols = list(symbols) if symbols is not None else []
+        self.fast = int(fast)
+        self.slow = int(slow)
+        if self.fast >= self.slow:
+            raise ValueError("fast must be < slow")
+
+    def _to_series(self, prices):
+        # Accept Series or DataFrame; normalize to Series (first col if DF).
+        if isinstance(prices, pd.DataFrame):
+            return prices.iloc[:, 0]
+        return prices
+
+    def on_bar(self, prices, i: int) -> Dict[str, int]:
+        s = self._to_series(prices)
+        if s is None or len(s) < self.slow:
+            return {}
+
+        # Robust MA calculation without .rolling(min_periods=slow)
+        # Use tail slices to avoid pandas validation issues.
+        fma = s.tail(self.fast).mean()
+        sma = s.tail(self.slow).mean()
+
+        if pd.isna(fma) or pd.isna(sma):
+            return {}
+
+        sign = 1 if fma > sma else -1
+
+        out: Dict[str, int] = {"signal": sign}
+        keys = self.symbols if self.symbols else ["BASKET"]
+        for k in keys:
+            out[k] = sign
         return out

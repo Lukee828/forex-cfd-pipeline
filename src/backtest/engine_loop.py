@@ -1,84 +1,82 @@
-﻿# src/backtest/engine_loop.py
-"""
-Minimal event-driven engine skeleton.
-
-Wire these later:
-- feed.next_bar() -> MarketEvent
-- strategy.on_market(event) -> List[SignalEvent]
-- portfolio.on_market(event), portfolio.on_fill(fill)
-- execution.execute(order) -> FillEvent
-
-This module intentionally does not import your concrete classes
-to avoid interface coupling until you're ready.
-"""
-from typing import List, Optional, Protocol, Any
-from .event_queue import EventQueue
+import os
+import numpy as np
+import pandas as pd
 
 
-class MarketEventP(Protocol):
-    ts: Any
+class EngineLoop:
+    """
+    Minimal, robust engine:
+      - Computes equal-weighted basket log-returns from closes.
+      - Strategy.on_bar(window, i) -> {"signal": +1/-1} (or {} to keep pos).
+      - Equity starts at 1.0 and compounds multiplicatively: E *= (1 + r*pos - cost).
+    """
 
+    def __init__(self, feed, strategy, trading_bps: float = 0.0):
+        self.feed = feed
+        self.strategy = strategy
+        self.trading_bps = float(trading_bps)
 
-class SignalEventP(Protocol):
-    symbol: str
-    direction: str  # "LONG"/"SHORT"/"FLAT"
+    def run(
+        self, max_steps: int = None, out_csv: str = os.path.join("runs", "equity.csv")
+    ) -> pd.Series:
+        # Get closes for selected symbols (DataFrame: index=time, columns=symbols)
+        closes = self.feed.get_closes(limit=max_steps)
+        if isinstance(closes, pd.Series):
+            closes = closes.to_frame("Close")
 
+        # Clean closes
+        closes = (
+            closes.sort_index()
+            .astype(float)
+            .replace([np.inf, -np.inf], np.nan)
+            .ffill()
+            .bfill()
+        )
+        if closes.isna().any().any():
+            closes = closes.dropna()
 
-class OrderEventP(Protocol):
-    symbol: str
-    side: str  # "BUY"/"SELL"
+        if closes.shape[0] < 3:
+            equity = pd.Series(
+                [1.0] * closes.shape[0], index=closes.index, name="equity"
+            )
+            os.makedirs(os.path.dirname(out_csv), exist_ok=True)
+            equity.to_frame().to_csv(out_csv)
+            return equity
 
+        # Equal-weight log-returns across symbols
+        # (use log so pos switches don’t create drift from arithmetic chaining)
+        basket = closes.mean(axis=1)
+        logr = np.log(basket / basket.shift(1)).replace([np.inf, -np.inf], np.nan)
+        logr = logr.fillna(0.0)
 
-class FillEventP(Protocol):
-    symbol: str
-    side: str
+        # Roll through bars, ask strategy for signal
+        equity_vals = []
+        pos_prev = 0
+        eq = 1.0
 
+        # rolling window series we pass to the strategy (basket closes)
+        for i in range(len(basket)):
+            px_window = basket.iloc[: i + 1]
+            sig_dict = self.strategy.on_bar(px_window, i) or {}
+            pos_next = int(sig_dict.get("signal", pos_prev))  # stay if no signal
 
-class FeedP(Protocol):
-    def next_bar(self) -> Optional[MarketEventP]: ...
+            # costs when changing position (turnover = |pos_next - pos_prev|)
+            turnover = abs(pos_next - pos_prev)
+            cost = turnover * (self.trading_bps / 1e4)
 
+            r = float(logr.iloc[i])  # per-bar log return
+            # convert log-return to arithmetic approx for compounding with costs
+            arith = np.expm1(r)
 
-class StrategyP(Protocol):
-    def on_market(self, event: MarketEventP) -> List[SignalEventP]: ...
+            eq = eq * (1.0 + pos_prev * arith - cost)
+            # avoid degenerate negatives (still keep > 0 for summarizer)
+            if not np.isfinite(eq) or eq <= 0:
+                eq = max(1e-8, eq if np.isfinite(eq) else 1e-8)
 
+            equity_vals.append(eq)
+            pos_prev = pos_next
 
-class PortfolioP(Protocol):
-    def on_market(self, event: MarketEventP) -> None: ...
-    def on_signal(self, sig: SignalEventP) -> Optional[OrderEventP]: ...
-    def on_fill(self, fill: FillEventP) -> None: ...
-
-
-class ExecutionP(Protocol):
-    def execute(self, order: OrderEventP) -> FillEventP: ...
-
-
-def run_loop(
-    feed: FeedP,
-    strategy: StrategyP,
-    portfolio: PortfolioP,
-    execution: ExecutionP,
-    max_steps: int = 10_000,
-) -> int:
-    """Pump a tiny event loop. Returns number of market steps processed."""
-    q: EventQueue[object] = EventQueue()
-    steps = 0
-    while steps < max_steps:
-        mkt = feed.next_bar()
-        if mkt is None:
-            break
-        steps += 1
-        q.put(mkt)
-
-        # Process market event
-        portfolio.on_market(mkt)
-        for sig in strategy.on_market(mkt):
-            ord_ev = portfolio.on_signal(sig)
-            if ord_ev is not None:
-                fill = execution.execute(ord_ev)
-                portfolio.on_fill(fill)
-
-        # drain any extra events (future expansion)
-        while not q.empty():
-            _ = q.get()
-
-    return steps
+        equity = pd.Series(equity_vals, index=basket.index, name="equity")
+        os.makedirs(os.path.dirname(out_csv), exist_ok=True)
+        equity.to_frame().to_csv(out_csv)
+        return equity

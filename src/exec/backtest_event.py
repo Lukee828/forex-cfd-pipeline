@@ -1,66 +1,37 @@
-﻿# src/exec/backtest_event.py
 import argparse
-from datetime import datetime, UTC
-
-from src.backtest.engine_loop import run_loop
-
-
-class _NoOpFeed:
-    def __init__(self, steps: int) -> None:
-        self._n = steps
-        self._i = 0
-
-    class _Ev:
-        def __init__(self, ts):
-            self.ts = ts
-
-    def next_bar(self):
-        if self._i >= self._n:
-            return None
-        self._i += 1
-        return self._Ev(datetime.now(UTC))
+import os
+from src.backtest.data_feed import ParquetDataFeed
+from src.backtest.strategies.ma_cross import MACrossStrategy
+from src.backtest.engine_loop import EngineLoop
 
 
-class _NoOpStrategy:
-    def on_market(self, event):  # returns no signals
-        return []
-
-
-class _NoOpPortfolio:
-    def on_market(self, event):
-        pass
-
-    def on_signal(self, sig):
-        return None
-
-    def on_fill(self, fill):
-        pass
-
-
-class _NoOpExecution:
-    def execute(self, order):
-        return order  # pretend filled, same shape
-
-
-def main() -> int:
+def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--cfg", required=False, help="(unused for now) config path")
-    ap.add_argument("--start", required=False)
-    ap.add_argument("--end", required=False)
-    ap.add_argument(
-        "--steps", type=int, default=25, help="how many market ticks to simulate (noop)"
-    )
-    ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--symbols", default="EURUSD,GBPUSD,USDJPY,XAUUSD")
+    ap.add_argument("--max-steps", type=int, default=1000)
+    ap.add_argument("--strategy", default="ma_cross")
+    ap.add_argument("--fast", type=int, default=10)
+    ap.add_argument("--slow", type=int, default=50)
+    ap.add_argument("--parquet", default="data")
+    ap.add_argument("--trading-bps", type=float, default=0.0)
     args = ap.parse_args()
 
-    steps = run_loop(
-        _NoOpFeed(args.steps), _NoOpStrategy(), _NoOpPortfolio(), _NoOpExecution()
-    )
-    print(f"[event-driven] OK — processed {steps} market steps (noop).")
-    if args.dry_run:
-        print("[D R Y   R U N] no outputs.")
-    return 0
+    symbols = [s.strip() for s in args.symbols.split(",") if s.strip()]
+    feed = ParquetDataFeed(args.parquet, symbols)
+
+    if args.strategy.lower() != "ma_cross":
+        raise ValueError("Only ma_cross is wired in this runner.")
+
+    strat = MACrossStrategy(symbols=symbols, fast=args.fast, slow=args.slow)
+    loop = EngineLoop(feed, strat, trading_bps=args.trading_bps)
+
+    out_csv = os.path.join("runs", "equity.csv")
+    equity = loop.run(max_steps=args.max_steps, out_csv=out_csv)
+
+    # quick print so PS scripts can grep/see something useful
+    total = float(equity.iloc[-1] / equity.iloc[0] - 1.0) if len(equity) else 0.0
+    print(f"[event-driven] OK — bars={len(equity)} total={total:.2%}. Wrote {out_csv}")
 
 
 if __name__ == "__main__":
-    raise SystemExit(main())
+    main()

@@ -1,41 +1,35 @@
-from pathlib import Path
-from typing import Dict, Iterable, List
+import os
 import pandas as pd
-from .events import MarketEvent
 
 
 class ParquetDataFeed:
-    def __init__(self, folder: str, symbols: List[str]):
-        self.folder = Path(folder)
-        self.symbols = symbols
-        self.frames: Dict[str, pd.DataFrame] = {}
-        for s in symbols:
-            p = self.folder / f"{s}.parquet"
-            df = pd.read_parquet(p)
-            if "timestamp" in df.columns:
-                df = df.set_index(pd.to_datetime(df["timestamp"], utc=True)).drop(
-                    columns=["timestamp"]
-                )
-            if not df.index.tz:
-                df.index = df.index.tz_localize("UTC")
-            # keep only required columns
-            df = df[["Open", "High", "Low", "Close", "Volume"]].sort_index()
-            self.frames[s] = df
-        # align by outer join of indices
-        self.index = sorted(set().union(*[df.index for df in self.frames.values()]))
+    def __init__(self, root: str, symbols):
+        self.root = root
+        self.symbols = list(symbols)
 
-    def stream(self) -> Iterable[MarketEvent]:
-        for ts in self.index:
-            ohlcv = {}
-            for s, df in self.frames.items():
-                if ts in df.index:
-                    row = df.loc[ts]
-                    ohlcv[s] = dict(
-                        Open=float(row["Open"]),
-                        High=float(row["High"]),
-                        Low=float(row["Low"]),
-                        Close=float(row["Close"]),
-                        Volume=float(row["Volume"]),
-                    )
-            if ohlcv:
-                yield MarketEvent(ts=ts, ohlcv_by_sym=ohlcv)
+    def get_closes(self, limit=None):
+        frames = []
+        for sym in self.symbols:
+            p = os.path.join(self.root, f"{sym}.parquet")
+            df = pd.read_parquet(p)
+            # accept any reasonable casing; select the first matching close-like column
+            cols = {c.lower(): c for c in df.columns}
+            close_col = None
+            for key in ("close", "adj close", "adj_close"):
+                if key in cols:
+                    close_col = cols[key]
+                    break
+            if close_col is None:
+                raise KeyError(
+                    f"{sym}: no Close column in {p} (have {list(df.columns)})"
+                )
+            cl = df[close_col].astype(float).rename(sym)
+            frames.append(cl)
+
+        closes = pd.concat(frames, axis=1).sort_index()
+        closes = closes.replace([float("inf"), float("-inf")], pd.NA).ffill().bfill()
+
+        if limit is not None:
+            closes = closes.iloc[: int(limit)]
+
+        return closes
