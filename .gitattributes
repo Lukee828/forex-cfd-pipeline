@@ -23,3 +23,14 @@
 *.jpeg            binary
 *.gif             binary
 *.pdf             binary
+# EOL policy
+*.py    text eol=lf
+*.yaml  text eol=lf
+*.yml   text eol=lf
+*.csv   text eol=lf
+*.ps1   text eol=crlf
+*.psm1  text eol=crlf
+# Generated / binary-ish
+*.zip   binary
+runs/**     binary
+.backup/**  binary

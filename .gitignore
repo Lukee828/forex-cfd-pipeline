@@ -47,3 +47,8 @@ config/production.yaml.bak_*
 tools/*.ps1.bak
 
 .tmp_*
+# repo hygiene
+.backup/
+*.diff
+*.bak
+*.tmp
