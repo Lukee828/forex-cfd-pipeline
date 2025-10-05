@@ -13,6 +13,9 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
+from backtest.feature_flags import RuntimeState  # noqa: E402
+from backtest.runner_hooks import log_flag_states  # noqa: E402
+
 
 def _read_prices_1d(symbol: str) -> pd.DataFrame:
     base = Path("data/prices_1d")
@@ -132,6 +135,7 @@ def main():
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
+    log_flag_states(RuntimeState().flags)
     syms = _load_cfg(args.cfg)
     all_syms = [*syms["core"], *syms["satellite"]]
     print(f"Config loaded OK. Core: {syms['core']}  Satellite: {syms['satellite']}")

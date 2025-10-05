@@ -3,15 +3,13 @@ param(
   [string]$Python = ".\\.venv\\Scripts\\python.exe"
 )
 $ErrorActionPreference = "Stop"
-if (-not (Test-Path $Python)) { throw "Python not found at $Python" }
-if (-not (Test-Path $Cfg))    { throw "Config not found at $Cfg" }
 
-# Run and capture stdout
-$out = & $Python "src\\exec\\backtest.py" --cfg $Cfg --dry-run 2>&1
-$outText = [string]::Join("`n", $out)
+# Run as a module so the 'src' package is authoritative
+$out = & $Python -m src.exec.backtest --cfg $Cfg --dry-run 2>&1
+$txt = [string]::Join("`n",$out)
 
-if ($outText -notmatch 'flags:\s+vol_targeting=.*cost_windows=.*spread_guard=.*dual_tp=.*time_stop=.*be_gate_opposite=.*') {
-  Write-Host $outText
+if ($txt -notmatch 'flags:\s+vol_targeting=.*cost_windows=.*spread_guard=.*dual_tp=.*time_stop=.*be_gate_opposite=.*') {
+  $out | Select-Object -First 60 | Write-Host
   throw "Flag print diagnostic not found in output."
 }
 
