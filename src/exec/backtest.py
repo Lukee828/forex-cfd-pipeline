@@ -1,4 +1,4 @@
-﻿# src/exec/backtest.py  (headless-safe)
+# src/exec/backtest.py  (headless-safe)
 import argparse
 from pathlib import Path
 import sys
