@@ -1,5 +1,5 @@
 fail_fast: false
-default_stages: [commit]
+default_stages: [pre-commit]
 exclude: |
   ^(\.backup/|runs/|\.venv/|logs/|data/|executions/|.*\.csv|.*\.log)
 repos:
