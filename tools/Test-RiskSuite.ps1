@@ -10,3 +10,6 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-BreakEvenGate.ps1
 if ($LASTEXITCODE -ne 0) { throw "BreakEvenGate subtest failed." }
 
 Write-Host "RiskSuite OK" -ForegroundColor Green
+
+& .\.venv\Scripts\python.exe tools\Smoke-Signatures.py
+if ($LASTEXITCODE -ne 0) { throw "Signature smoke failed." }

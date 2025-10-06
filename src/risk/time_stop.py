@@ -37,6 +37,13 @@ def should_time_stop(
     return (hit_bars or hit_days, b, d)
 
 
+# --- Back-compat alias override (appended by tooling) ---
 def is_time_stop(bars_elapsed: int, days_elapsed: int, cfg: "TimeStopConfig"):
     """Back-compat alias for overlays & tools expecting is_time_stop(bars, days, cfg)."""
-    return should_time_stop(bars_elapsed, days_elapsed, cfg)
+    from datetime import datetime, timedelta, timezone
+
+    now = datetime.now(tz=timezone.utc)
+    entry = now - timedelta(
+        days=days_elapsed, minutes=bars_elapsed * 60
+    )  # assume 60m bars
+    return should_time_stop(entry, now, bar_minutes=60, cfg=cfg)
