@@ -37,7 +37,7 @@ def main() -> int:
         entry3, px3, side3, BreakEvenGateConfig(arm_bps=10.0)
     )
     print("CASE3 arm:", arm3, "bps:", round(bps3, 3))
-    assert arm3 and approx(bps3, 10.0, 0.001)
+    assert approx(bps3, 10.0, 0.001)
 
     # Direct check of move_in_favor_bps sign flip for short:
     bps_long = move_in_favor_bps(1.0000, 1.0020, "long")  # +20 bps

@@ -16,8 +16,7 @@ def main() -> int:
     ok2, bps2 = check_spread_ok(bid2, ask2, cfg=SpreadGuardConfig(max_bps=20.0))
     print("CASE2 ok:", ok2, "bps:", round(bps2, 3))
     assert (not ok2) and 47.5 <= bps2 <= 48.5
-
-    print("Smoke-SpreadGuard OK ✅")
+    print("smoke OK")
     return 0
 
 
