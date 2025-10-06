@@ -52,3 +52,4 @@ tools/*.ps1.bak
 *.diff
 *.bak
 *.tmp
+mypy.ini
