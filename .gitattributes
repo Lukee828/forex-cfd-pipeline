@@ -1,36 +1,6 @@
-# Default: text files normalized, LF in repo
-*                 text=auto eol=lf
+* text=auto
+*.py  text eol=lf
+*.ps1 text eol=crlf
 
-# Windows-native scripts
-*.ps1             text eol=crlf
-*.psm1            text eol=crlf
-*.psd1            text eol=crlf
-*.bat             text eol=crlf
-*.cmd             text eol=crlf
-
-# Unixy scripts & code
-*.py              text eol=lf
-*.sh              text eol=lf
-*.yml             text eol=lf
-*.yaml            text eol=lf
-*.md              text eol=lf
-*.csv             text eol=lf
-
-# Data / binaries (never touch line endings)
-*.parquet         binary
-*.png             binary
-*.jpg             binary
-*.jpeg            binary
-*.gif             binary
-*.pdf             binary
-# EOL policy
-*.py    text eol=lf
-*.yaml  text eol=lf
-*.yml   text eol=lf
-*.csv   text eol=lf
-*.ps1   text eol=crlf
-*.psm1  text eol=crlf
-# Generated / binary-ish
-*.zip   binary
-runs/**     binary
-.backup/**  binary
+# Normalize to LF on checkout/commit
+* text=auto eol=lf
