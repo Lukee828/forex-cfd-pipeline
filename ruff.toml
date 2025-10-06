@@ -1,0 +1,4 @@
+[tool.ruff]
+select = ["E","F","W","I","UP","B","PIE"]
+ignore = ["E501"]
+fix = true
