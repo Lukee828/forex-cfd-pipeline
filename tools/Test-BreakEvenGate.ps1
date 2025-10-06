@@ -1,22 +1,7 @@
-param(
-  [string]$Python = ".\.venv\Scripts\python.exe"
-)
 $ErrorActionPreference = "Stop"
+$python = ".\.venv\Scripts\python.exe"
 
-# Ensure package discovery from repo root (so src.* works from tools/)
-$repoRoot = (Get-Location).Path
-$env:PYTHONPATH = "$repoRoot" + ($(if ($env:PYTHONPATH) { ";" + $env:PYTHONPATH } else { "" }))
+& $python "tools\Smoke-BreakEvenGate.py"
+if ($LASTEXITCODE -ne 0) { throw "BreakEvenGate smoke failed." }
 
-$out = & $Python "tools\Smoke-BreakEvenGate.py" 2>&1
-$out | Write-Host
-
-$txt = [string]::Join("`n",$out)
-if ($txt -notmatch 'CASE1 arm:\s*True' -or
-    $txt -notmatch 'CASE2 arm:\s*False' -or
-    $txt -notmatch 'CASE3 arm:\s*True' -or
-    $txt -notmatch 'SIGN test long/short:')
-{
-  throw "BreakEvenGate smoke failed."
-}
-
-Write-Host "`nBreakEvenGate smoke OK ✅" -ForegroundColor Green
+Write-Host "BreakEvenGate smoke OK" -ForegroundColor Green

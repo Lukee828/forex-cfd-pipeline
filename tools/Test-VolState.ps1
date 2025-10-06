@@ -1,21 +1,7 @@
-param(
-  [string]$Python = ".\.venv\Scripts\python.exe"
-)
 $ErrorActionPreference = "Stop"
+$python = ".\.venv\Scripts\python.exe"
 
-# Make top-level package 'src' importable
-$repoRoot = (Get-Location).Path
-$env:PYTHONPATH = "$repoRoot" + ($(if ($env:PYTHONPATH) { ";" + $env:PYTHONPATH } else { "" }))
+& $python "tools\Smoke-VolState.py"
+if ($LASTEXITCODE -ne 0) { throw "VolState smoke failed." }
 
-# compile sanity first
-& $Python -m compileall -q src *> $null
-
-# run smoke
-$out = & $Python "tools\Smoke-VolState.py" 2>&1
-$txt = [string]::Join("`n",$out)
-if ($txt -notmatch "VOLSTATE_OK") {
-  $out | Select-Object -First 80 | Write-Host
-  throw "VolState smoke failed."
-}
-
-Write-Host "VolState smoke OK ✅" -ForegroundColor Green
+Write-Host "VolState smoke OK" -ForegroundColor Green

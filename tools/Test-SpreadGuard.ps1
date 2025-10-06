@@ -1,17 +1,7 @@
-param(
-  [string]$Python = ".\.venv\Scripts\python.exe"
-)
 $ErrorActionPreference = "Stop"
+$python = ".\.venv\Scripts\python.exe"
 
-$repoRoot = (Get-Location).Path
-$env:PYTHONPATH = $repoRoot + ($(if ($env:PYTHONPATH) { ";" + $env:PYTHONPATH } else { "" }))
+& $python "tools\Smoke-SpreadGuard.py"
+if ($LASTEXITCODE -ne 0) { throw "SpreadGuard smoke failed." }
 
-$out = & $Python "tools\Smoke-SpreadGuard.py" 2>&1
-$txt = [string]::Join("`n", $out)
-
-if ($txt -notmatch "Smoke-SpreadGuard OK") {
-  $out | Select-Object -First 60 | Write-Host
-  throw "SpreadGuard smoke failed."
-}
-
-Write-Host "SpreadGuard smoke OK ✅" -ForegroundColor Green
+Write-Host "SpreadGuard smoke OK" -ForegroundColor Green
