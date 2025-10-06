@@ -18,10 +18,20 @@ repos:
 
   - repo: local
     hooks:
+      # Update manifest on pre-commit (never fail CI here)
+      - id: update-manifest
+        name: update-manifest
+        language: system
+        entry: pwsh
+        args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","./tools/Hook-UpdateManifest.ps1"]
+        pass_filenames: false
+        stages: [pre-commit]
+
+      # Verify manifest on pre-push (may fail push if drift)
       - id: verify-manifest
         name: verify-manifest
         language: system
         entry: pwsh
-        args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","./tools/Verify-Manifest.ps1"]
+        args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","./tools/Hook-VerifyManifest.ps1"]
         pass_filenames: false
-        stages: [pre-commit]
+        stages: [pre-push]
