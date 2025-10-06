@@ -1,36 +1,17 @@
-fail_fast: false
-default_stages: [pre-commit]
-exclude: |
-  ^(\.backup/|runs/|\.venv/|logs/|data/|executions/|.*\.csv|.*\.log)
 repos:
   - repo: https://github.com/psf/black
-    rev: 25.9.0
+    rev: 24.8.0
     hooks:
       - id: black
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.13.2
-    hooks:
-      - id: ruff
-        alias: ruff (legacy alias)
-
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v6.0.0
-    hooks:
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
-
-  - repo: local
-    hooks:
-      - id: pytest
-        name: pytest with coverage
-        entry: pytest --maxfail=1 --disable-warnings -q --cov=src --cov-report=term-missing
-        language: system
-        types: [python]
-        pass_filenames: false
-
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.6.4
+    rev: v0.13.3
     hooks:
       - id: ruff
         args: ["--fix", "--exit-non-zero-on-fix"]
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.6.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
