@@ -1,3 +1,4 @@
+param([switch]$StayOpen)
 $ErrorActionPreference = "Stop"
 
 function Ok($m){ Write-Host "[OK]  $m" -ForegroundColor Green }
