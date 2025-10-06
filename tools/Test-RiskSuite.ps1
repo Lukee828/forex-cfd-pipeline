@@ -13,3 +13,7 @@ Write-Host "RiskSuite OK" -ForegroundColor Green
 
 & .\.venv\Scripts\python.exe tools\Smoke-Signatures.py
 if ($LASTEXITCODE -ne 0) { throw "Signature smoke failed." }
+
+# Resilience smoke
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Resilience.ps1
+if (0 -ne 0) { throw "Resilience subtest failed." }
