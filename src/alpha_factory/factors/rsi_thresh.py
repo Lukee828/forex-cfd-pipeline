@@ -36,7 +36,13 @@ class RSIThreshold(Factor):
         self.hi = float(hi)
 
     def compute(self, df: pd.DataFrame) -> pd.Series:
-        s = df.iloc[:, 0].astype(float)
+        # Accept Series or DataFrame (or array-like)
+        if isinstance(df, pd.Series):
+            s = df.astype(float)
+        elif isinstance(df, pd.DataFrame):
+            s = df.iloc[:, 0].astype(float)
+        else:
+            s = pd.Series(df).astype(float)
         r = _rsi(s, self.n)
         out = pd.Series(np.nan, index=s.index)
         out.loc[r < self.lo] = 1
