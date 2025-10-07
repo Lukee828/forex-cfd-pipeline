@@ -49,7 +49,7 @@ except NameError:
     registry.register(
         FactorSpec(
             name="sma_cross_10_30",
-            factory=lambda: SMACross(n_fast=10, n_slow=30),
+            factory=lambda: SMACross(fast=10, slow=30),
         )
     )
     _registered_sma_cross = True
