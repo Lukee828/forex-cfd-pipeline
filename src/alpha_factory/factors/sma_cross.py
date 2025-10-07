@@ -38,3 +38,24 @@ class SmaCross(Factor):
         m = slow.notna()
         sig[m] = (fast[m] > slow[m]).astype(float) - (fast[m] < slow[m]).astype(float)
         return sig
+
+
+# --- Register common SMACross specs with the global registry ---
+try:
+    _registered_sma_cross  # type: ignore[name-defined]
+except NameError:
+    from ..base import FactorSpec, registry
+
+    registry.register(
+        FactorSpec(
+            name="sma_cross_10_30",
+            factory=lambda: SMACross(n_fast=10, n_slow=30),
+        )
+    )
+    _registered_sma_cross = True
+
+# --- Back-compat alias (registry uses SMACross) ---
+try:
+    SMACross  # type: ignore[name-defined]
+except NameError:
+    SMACross = SmaCross
