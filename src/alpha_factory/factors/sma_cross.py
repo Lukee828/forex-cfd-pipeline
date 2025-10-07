@@ -37,6 +37,9 @@ class SmaCross(Factor):
         sig = pd.Series(index=s.index, dtype=float)
         m = slow.notna()
         sig[m] = (fast[m] > slow[m]).astype(float) - (fast[m] < slow[m]).astype(float)
+        # set a stable, descriptive Series name and return
+        sig.name = f"sma_cross_{'{'}self.fast{'}'}_{'{'}self.slow{'}'}"
+        sig.name = f"sma_cross_{'{'}self.fast{'}'}_{'{'}self.slow{'}'}"
         return sig
 
 
