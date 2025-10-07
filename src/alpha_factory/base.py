@@ -36,3 +36,16 @@ class AlphaRegistry:
     @classmethod
     def names(cls) -> list[str]:
         return sorted(cls._factors.keys())
+
+
+__all__ = (
+    "AlphaRegistry",
+    "Factor",
+    "FactorSpec",
+    "registry",
+)
+# --- Global registry singleton (available to factor modules) ---
+try:
+    registry  # type: ignore[name-defined]
+except NameError:
+    registry = AlphaRegistry()
