@@ -37,6 +37,7 @@ class SMASlope(Factor):
         out[:] = 0.0
         out[slope > 0] = 1.0
         out[slope < 0] = -1.0
+        out.name = f"sma_slope_{self.n}_{self.lookback}"
         return out
 
 

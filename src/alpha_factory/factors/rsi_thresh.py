@@ -48,6 +48,7 @@ class RSIThreshold(Factor):
         out.loc[r < self.lo] = 1
         out.loc[(r >= self.lo) & (r <= self.hi)] = 0
         out.loc[r > self.hi] = -1
+        out.name = f"rsi_thresh_{self.n}_{self.lo}_{self.hi}"
         return out
 
 
