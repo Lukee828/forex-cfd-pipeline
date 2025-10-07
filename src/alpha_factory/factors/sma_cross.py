@@ -40,6 +40,7 @@ class SmaCross(Factor):
         # set a stable, descriptive Series name and return
         sig.name = f"sma_cross_{'{'}self.fast{'}'}_{'{'}self.slow{'}'}"
         sig.name = f"sma_cross_{'{'}self.fast{'}'}_{'{'}self.slow{'}'}"
+        sig.name = f"sma_cross_{self.fast}_{self.slow}"
         return sig
 
 
