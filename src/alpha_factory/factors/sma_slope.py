@@ -17,16 +17,26 @@ class SMASlope(Factor):
         self.n = int(n)
         self.lookback = int(lookback)
 
-    def compute(self, df: pd.DataFrame) -> pd.Series:
-        # Use the first column as the price series (same convention as sma_cross)
-        s = df.iloc[:, 0].astype(float)
+    def compute(self, df: "pd.DataFrame | pd.Series") -> pd.Series:
+        # Normalize input to DataFrame with a 'close' column
+        if isinstance(df, pd.Series):
+            df = df.to_frame("close")
+        elif not isinstance(df, pd.DataFrame):
+            df = pd.DataFrame({"close": pd.Series(df)})
+
+        if "close" not in df.columns:
+            first_col = df.columns[0]
+            if str(first_col) != "close":
+                df = df.rename(columns={first_col: "close"})
+
+        s = pd.to_numeric(df["close"], errors="coerce").astype(float)
         sma = s.rolling(self.n, min_periods=self.n).mean()
         slope = sma - sma.shift(self.lookback)
 
         out = pd.Series(np.nan, index=s.index)  # keep warm-up NaNs
-        out.loc[slope > 0] = 1
-        out.loc[slope < 0] = -1
-        out.loc[slope == 0] = 0
+        out[:] = 0.0
+        out[slope > 0] = 1.0
+        out[slope < 0] = -1.0
         return out
 
 
