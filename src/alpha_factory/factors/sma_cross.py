@@ -1,8 +1,7 @@
 from __future__ import annotations
-import numpy as np
 import pandas as pd
 from dataclasses import dataclass
-from ..base import Factor, AlphaRegistry, FactorSpec
+from ..base import Factor
 
 
 @dataclass
@@ -13,21 +12,29 @@ class SmaCross(Factor):
     slow: int = 30
 
     def compute(self, df: pd.DataFrame) -> pd.Series:
-        for col in self.requires:
-            if col not in df.columns:
-                raise KeyError(f"missing required column: {col}")
-        c = df["close"]
-        fast = c.rolling(self.fast, min_periods=self.fast).mean()
-        slow = c.rolling(self.slow, min_periods=self.slow).mean()
+        import pandas as pd
 
-        # valid only where both MAs exist
-        valid = fast.notna() & slow.notna()
-        sig = (fast > slow).astype("int8") - (fast < slow).astype("int8")
-        sig = sig.where(valid, np.nan).rename(
-            self.name
-        )  # propagate NaNs during warm-up
+        # [alpha-factory] robust, idempotent input normalization
+        # Accept Series, DataFrame, or array-like; ensure a 'close' column
+        if isinstance(df, pd.Series):
+            df = df.to_frame(name="close")
+        elif not isinstance(df, pd.DataFrame):
+            df = pd.DataFrame({"close": pd.Series(df)})
+
+        if "close" not in df.columns:
+            # rename first column to 'close' if needed
+            first_col = df.columns[0]
+            if str(first_col) != "close":
+                df = df.rename(columns={first_col: "close"})
+
+        s = pd.to_numeric(df["close"], errors="coerce").astype(float)
+
+        # rolling means with warm-up NaNs preserved
+        fast = s.rolling(self.fast, min_periods=self.fast).mean()
+        slow = s.rolling(self.slow, min_periods=self.slow).mean()
+
+        # signal only where slow is defined; keep early NaNs
+        sig = pd.Series(index=s.index, dtype=float)
+        m = slow.notna()
+        sig[m] = (fast[m] > slow[m]).astype(float) - (fast[m] < slow[m]).astype(float)
         return sig
-
-
-# auto-register on import
-AlphaRegistry.register(FactorSpec(name=SmaCross.name, factory=lambda: SmaCross()))
