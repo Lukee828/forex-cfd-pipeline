@@ -11,36 +11,48 @@ class SmaCross(Factor):
     fast: int = 10
     slow: int = 30
 
-    def compute(self, df: pd.DataFrame) -> pd.Series:
-        import pandas as pd
+    def compute(self, df):
 
-        # [alpha-factory] robust, idempotent input normalization
-        # Accept Series, DataFrame, or array-like; ensure a 'close' column
+        # Normalize input
+
         if isinstance(df, pd.Series):
-            df = df.to_frame(name="close")
-        elif not isinstance(df, pd.DataFrame):
-            df = pd.DataFrame({"close": pd.Series(df)})
 
-        if "close" not in df.columns:
-            # rename first column to 'close' if needed
-            first_col = df.columns[0]
-            if str(first_col) != "close":
-                df = df.rename(columns={first_col: "close"})
+            s = pd.to_numeric(df, errors="coerce").astype(float)
 
-        s = pd.to_numeric(df["close"], errors="coerce").astype(float)
+            df = pd.DataFrame({"close": s})
 
-        # rolling means with warm-up NaNs preserved
+        elif isinstance(df, pd.DataFrame):
+
+            if "close" not in df.columns:
+
+                df = df.rename(columns={df.columns[0]: "close"})
+
+            df["close"] = pd.to_numeric(df["close"], errors="coerce").astype(float)
+
+        else:
+
+            df = pd.DataFrame(
+                {"close": pd.to_numeric(pd.Series(df), errors="coerce").astype(float)}
+            )
+
+        s = df["close"]
+
+        # Rolling means
+
         fast = s.rolling(self.fast, min_periods=self.fast).mean()
+
         slow = s.rolling(self.slow, min_periods=self.slow).mean()
 
-        # signal only where slow is defined; keep early NaNs
-        sig = pd.Series(index=s.index, dtype=float)
-        m = slow.notna()
-        sig[m] = (fast[m] > slow[m]).astype(float) - (fast[m] < slow[m]).astype(float)
-        # set a stable, descriptive Series name and return
-        sig.name = f"sma_cross_{'{'}self.fast{'}'}_{'{'}self.slow{'}'}"
-        sig.name = f"sma_cross_{'{'}self.fast{'}'}_{'{'}self.slow{'}'}"
-        sig.name = f"sma_cross_{self.fast}_{self.slow}"
+        # Initialize zeros; only compute where both windows are valid
+
+        sig = pd.Series(0.0, index=s.index, name=f"sma_cross_{self.fast}_{self.slow}")
+
+        m = fast.notna() & slow.notna()
+
+        sig.loc[m] = (fast.loc[m] > slow.loc[m]).astype(float) - (
+            fast.loc[m] < slow.loc[m]
+        ).astype(float)
+
         return sig
 
 
@@ -48,18 +60,13 @@ class SmaCross(Factor):
 try:
     _registered_sma_cross  # type: ignore[name-defined]
 except NameError:
-    from ..base import FactorSpec, registry
+    from ..base import FactorSpec, registry as AlphaRegistry
 
-    registry.register(
+    # Default example registration
+    AlphaRegistry.register(
         FactorSpec(
             name="sma_cross_10_30",
-            factory=lambda: SMACross(fast=10, slow=30),
+            factory=lambda: SmaCross(fast=10, slow=30),
         )
     )
     _registered_sma_cross = True
-
-# --- Back-compat alias (registry uses SMACross) ---
-try:
-    SMACross  # type: ignore[name-defined]
-except NameError:
-    SMACross = SmaCross
