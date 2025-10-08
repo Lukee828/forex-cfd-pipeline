@@ -11,3 +11,8 @@ python -m venv .venv
 .\.venv\Scripts\python .\examples\run_alpha_factory.py
 .\.venv\Scripts\python -m pytest -q
 ```
+## Badges
+
+![Python](https://img.shields.io/badge/Python-3.11+-blue)
+![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen)
+![Tests](https://img.shields.io/badge/tests-passing-brightgreen)
