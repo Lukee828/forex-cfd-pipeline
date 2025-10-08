@@ -1,35 +1,47 @@
 import argparse
-import pandas as pd
+from pathlib import Path
+
 from feature.feature_store import FeatureStore
+from datafeed.csv_source import CsvPriceSource
 
 
-def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--symbol", required=True)
+def main() -> None:
+    ap = argparse.ArgumentParser(
+        description="Ingest prices into FeatureStore (CSV-supported)."
+    )
+    ap.add_argument("--db", default="runs/fs_ingest/fs.db", help="SQLite DB path")
+    ap.add_argument("--symbol", required=True, help="Instrument symbol, e.g., EURUSD")
     ap.add_argument(
         "--csv",
-        required=True,
-        help="Path to CSV with columns ts,open,high,low,close,volume",
+        help="CSV path with at least: timestamp (ISO), close (float). Optional: open, high, low.",
     )
-    ap.add_argument("--source", default="csv:manual")
-    ap.add_argument("--version", default=None)
-    ap.add_argument("--checksum", default=None)
+    ap.add_argument(
+        "--provenance",
+        default=None,
+        help="Arbitrary provenance/version label, e.g. v1 or 2024Q4-snapshot",
+    )
     args = ap.parse_args()
 
-    store = FeatureStore()
+    db_path = Path(args.db)
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+
+    store = FeatureStore(db_path)
     store.init()
 
-    df = pd.read_csv(args.csv)
-    if "ts" not in df.columns:
-        for alt in ("timestamp", "time", "date", "datetime"):
-            if alt in df.columns:
-                df = df.rename(columns={alt: "ts"})
-                break
-    changed = store.upsert_prices(args.symbol, df)
-    store.record_provenance(
-        args.symbol, "prices", args.source, args.version, args.checksum
-    )
-    print(f"Upserted {changed} price rows for {args.symbol}")
+    if args.csv:
+        src = CsvPriceSource(args.csv)
+        df = src.fetch(args.symbol)
+        print(f"Loaded {len(df)} rows from CSV: {args.csv}")
+        n = store.upsert_prices(args.symbol, df)
+        prov = args.provenance
+        pid = store.record_provenance(
+            args.symbol, "prices", f"csv:{args.csv}", prov if prov else None
+        )
+        print(f"Upserted {n} rows to FeatureStore; provenance id={pid}")
+        return
+
+    print("No source specified. Use --csv PATH.")
+    return
 
 
 if __name__ == "__main__":
