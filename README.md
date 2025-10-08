@@ -16,3 +16,10 @@ python -m venv .venv
 ![Python](https://img.shields.io/badge/Python-3.11+-blue)
 ![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen)
 ![Tests](https://img.shields.io/badge/tests-passing-brightgreen)
+### FeatureStore demo
+
+Run:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\Run-FeatureStoreDemo.ps1 -Symbol EURUSD -Rows 10
+```
