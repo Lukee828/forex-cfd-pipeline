@@ -1,0 +1,18 @@
+# --- core scientific stack ---
+numpy>=1.26
+pandas>=2.2
+pyarrow>=15
+
+# plotting/reporting (used by tools/make_report etc.)
+matplotlib>=3.8
+plotly>=5.22
+
+# yaml / config
+PyYAML>=6.0.1
+
+# db / storage helpers (if you use them)
+sqlite-utils>=3.36
+
+# broker / data libs (optional; comment out if not installed on this box)
+# MetaTrader5>=5.0.45
+# dukascopy-python>=0.6.2

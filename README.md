@@ -1,9 +1,25 @@
+# Forex CFD Pipeline
 
+> Lean, testable research sandbox with an **Alpha Factory** and guardrails.
 
-## Direct download using `dukascopy-python`
-```bash
-pip install dukascopy-python
-python -m src.data.dukascopy_downloader --symbol EURUSD --tf 1h --start 2022-01-01 --end 2022-12-31 --out data/prices_1h/EURUSD.parquet
+## Quickstart
+```pwsh
+python -m venv .venv
+.\.venv\Scripts\pip install -U pip
+.\.venv\Scripts\pip install -r requirements.txt
+.\.venv\Scripts\python .\tools\Smoke-AlphaFactory.py
+.\.venv\Scripts\python .\examples\run_alpha_factory.py
+.\.venv\Scripts\python -m pytest -q
 ```
-If your package exposes a different API, edit `_fetch_with_library` in `src/data/dukascopy_downloader.py` (it already tries several common patterns).
-Generated on 2025-09-28T11:07:20.867016Z
+## Badges
+
+![Python](https://img.shields.io/badge/Python-3.11+-blue)
+![Pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen)
+![Tests](https://img.shields.io/badge/tests-passing-brightgreen)
+### FeatureStore demo
+
+Run:
+
+```powershell
+pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\Run-FeatureStoreDemo.ps1 -Symbol EURUSD -Rows 10
+```

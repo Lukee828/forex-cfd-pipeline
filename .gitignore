@@ -47,3 +47,17 @@ config/production.yaml.bak_*
 tools/*.ps1.bak
 
 .tmp_*
+# repo hygiene
+.backup/
+*.diff
+*.bak
+*.tmp
+mypy.ini
+# Local data & runs
+.data/
+runs/
+*.db
+
+# Python build/cache
+__pycache__/
+*.pyc

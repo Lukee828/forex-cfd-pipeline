@@ -1,0 +1,102 @@
+name: CI Smokes (PS7)
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+jobs:
+  smokes:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        python-version: ["3.13"]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Show pwsh/python versions
+        shell: pwsh
+        run: |
+          $PSVersionTable.PSVersion
+          python --version
+
+      - name: Create venv & install deps
+        shell: pwsh
+        run: |
+          python -m venv .venv
+          if ($IsWindows) {
+            $pip = ".\.venv\Scripts\pip.exe"
+          } else {
+            $pip = "./.venv/bin/pip"
+          }
+          & $pip install --upgrade pip
+          if (Test-Path "requirements.txt") {
+            & $pip install -r requirements.txt
+          }
+          if (Test-Path "requirements-dev.txt") {
+            & $pip install -r requirements-dev.txt
+          }
+          # Ensure tools we rely on are present even if not in requirements
+          & $pip install pre-commit pytest ruff black coverage
+
+      - name: Patch PS scripts for Linux path (no-op on Windows)
+        shell: pwsh
+        run: |
+          if (-not $IsWindows) {
+            $pyPath = "./.venv/bin/python"
+            foreach ($file in @("tools/Test-TimeStop.ps1","tools/Test-Overlay.ps1")) {
+              if (Test-Path $file) {
+                (Get-Content $file -Raw) `
+                  -replace '\.\\\.venv\\Scripts\\python\.exe', $pyPath `
+                  | Set-Content $file -Encoding utf8
+              }
+            }
+          }
+
+      - name: Run pre-commit (all hooks)
+        shell: pwsh
+        run: |
+          if ($IsWindows) {
+            $pc = ".\.venv\Scripts\pre-commit.exe"
+          } else {
+            $pc = "./.venv/bin/pre-commit"
+          }
+          & $pc run -a
+
+      - name: Run TimeStop smoke
+        shell: pwsh
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File tools/Test-TimeStop.ps1
+
+      - name: Run Overlay smoke
+        shell: pwsh
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File tools/Test-Overlay.ps1
+
+name: risk-suite
+on: [push, pull_request]
+jobs:
+  windows-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - name: Create venv
+        run: python -m venv .venv
+      - name: Install deps
+        run: .\.venv\Scripts\pip install -r requirements.txt
+      - name: Run RiskSuite
+        shell: pwsh
+        run: pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-RiskSuite.ps1
+      - name: Run pre-commit
+        shell: pwsh
+        run: .\.venv\Scripts\python -m pip install pre-commit; pre-commit run -a
