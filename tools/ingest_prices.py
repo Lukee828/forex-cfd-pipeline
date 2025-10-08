@@ -1,35 +1,44 @@
+from __future__ import annotations
 import argparse
-import pandas as pd
+from pathlib import Path
+
 from feature.feature_store import FeatureStore
 
+try:
+    from datafeed.csv_source import CsvPriceSource
+except Exception:
+    CsvPriceSource = None
 
-def main():
-    ap = argparse.ArgumentParser()
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description="Ingest prices into FeatureStore")
     ap.add_argument("--symbol", required=True)
-    ap.add_argument(
-        "--csv",
-        required=True,
-        help="Path to CSV with columns ts,open,high,low,close,volume",
-    )
-    ap.add_argument("--source", default="csv:manual")
+    ap.add_argument("--csv", help="CSV with columns: timestamp,close")
+    ap.add_argument("--db", type=Path, default=Path("runs") / "fs_ingest" / "fs.db")
     ap.add_argument("--version", default=None)
-    ap.add_argument("--checksum", default=None)
     args = ap.parse_args()
 
-    store = FeatureStore()
-    store.init()
+    if args.csv is None:
+        raise SystemExit("--csv is required for now")
 
-    df = pd.read_csv(args.csv)
-    if "ts" not in df.columns:
-        for alt in ("timestamp", "time", "date", "datetime"):
-            if alt in df.columns:
-                df = df.rename(columns={alt: "ts"})
-                break
-    changed = store.upsert_prices(args.symbol, df)
-    store.record_provenance(
-        args.symbol, "prices", args.source, args.version, args.checksum
+    if CsvPriceSource is None:
+        raise SystemExit("CsvPriceSource not available")
+
+    src = CsvPriceSource(args.csv)
+    df = src.fetch(args.symbol)
+    print(f"Loaded {len(df)} rows from CSV: {args.csv}")
+
+    store = FeatureStore(args.db)
+    store.init()
+    n = store.upsert_prices(args.symbol, df)
+
+    from datetime import datetime, timezone
+
+    version = (
+        args.version or f"auto-{datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S')}"
     )
-    print(f"Upserted {changed} price rows for {args.symbol}")
+    pid = store.record_provenance(args.symbol, "prices", f"csv:{args.csv}", version)
+    print(f"Upserted {n} rows to FeatureStore; provenance id={pid}")
 
 
 if __name__ == "__main__":
