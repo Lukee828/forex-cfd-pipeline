@@ -53,3 +53,11 @@ tools/*.ps1.bak
 *.bak
 *.tmp
 mypy.ini
+# Local data & runs
+.data/
+runs/
+*.db
+
+# Python build/cache
+__pycache__/
+*.pyc
