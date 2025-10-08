@@ -1,147 +1,82 @@
 param(
-    [ValidateSet('major','minor','patch')]
-    [string]$Bump = 'patch',
-    [string]$RunsDir = 'runs',
-    [int]$MaxGrids = 12,
-    [switch]$Plot,
-    [int]$Top = 10,
-    [switch]$Push,
-    [switch]$GithubRelease
+  [Parameter(Mandatory = $true)]
+  [string]$Tag,
+  [string]$Title,
+  [string]$Notes,
+  [switch]$NoLatest  # pass -NoLatest if you do NOT want this marked as latest
 )
-function New-ReleaseNotes {
-  param(
-    [string]$VersionTag,
-    [string]$RunsDir = 'runs',
-    [int]$Top = 10
-  )
 
-  $lines = @("# Release $VersionTag", "")
+$ErrorActionPreference = "Stop"
 
-  $cons = Join-Path $RunsDir 'best_params_consensus.csv'
-  if (Test-Path $cons) {
-    try {
-      $rows = Import-Csv $cons | Select-Object -First $Top `
-        @{n='fast';e={[int]$_.fast}},
-        @{n='slow';e={[int]$_.slow}},
-        @{n='Sharpeμ';e={[double]([string]$_.sharpe_mean -replace ",",".")}},
-        @{n='Sharpeσ';e={[double]([string]$_.sharpe_std  -replace ",",".")}},
-        @{n='Calmarμ';e={[double]([string]$_.calmar_mean -replace ",",".")}},
-        @{n='obs';e={[int]$_.obs}}
-
-      $lines += @(
-        "## Top consensus (robustness)", "",
-        "| fast | slow | Sharpeμ | Sharpeσ | Calmarμ | obs |",
-        "|---:|---:|---:|---:|---:|---:|"
-      )
-      foreach ($r in $rows) {
-        $lines += ("| {0} | {1} | {2:N2} | {3:N2} | {4:N2} | {5} |" -f `
-          $r.fast,$r.slow,$r.'Sharpeμ',$r.'Sharpeσ',$r.'Calmarμ',$r.obs)
-      }
-      $lines += ""
-    } catch {
-      $lines += "_(couldn't parse consensus CSV)_"
-    }
-  } else {
-    $lines += "_(consensus CSV not found)_"
-  }
-
-  return ($lines -join "`n")
+function Exec([string]$cmd) {
+  Write-Host "» $cmd" -ForegroundColor DarkGray
+  & pwsh -NoProfile -Command $cmd
+  if ($LASTEXITCODE) { throw "Command failed ($LASTEXITCODE): $cmd" }
 }
 
-$ErrorActionPreference = 'Stop'
-$py = ".\.venv\Scripts\python.exe"
+# --- repo root
+$root = (git rev-parse --show-toplevel)
+if (-not $root) { throw "Not in a Git repo." }
+Set-Location $root
 
-function Get-LastTag {
-  $t = (git describe --tags --abbrev=0 2>$null)
-  if (-not $t) { return "v0.0.0" }
-  return $t.Trim()
+# --- Ensure tag exists locally
+$tagExistsLocal = (& git tag --list $Tag) -ne $null
+if (-not $tagExistsLocal) {
+  Write-Host "• Creating lightweight tag $Tag" -ForegroundColor Cyan
+  git tag $Tag
 }
 
-function Bump-SemVer([string]$tag, [string]$kind) {
-  if ($tag -match 'v?(\d+)\.(\d+)\.(\d+)') {
-    $maj = [int]$Matches[1]; $min = [int]$Matches[2]; $pat = [int]$Matches[3]
-  } else { $maj=0;$min=0;$pat=0 }
-  switch ($kind) {
-    "major" { $maj++; $min=0; $pat=0 }
-    "minor" { $min++; $pat=0 }
-    default { $pat++ }
-  }
-  return "v{0}.{1}.{2}" -f $maj,$min,$pat
-}
+# --- Push tag
+Write-Host "• Pushing tag $Tag" -ForegroundColor Cyan
+git push origin $Tag | Out-Null
 
-# 1) Recompute comparisons & artifacts
-$compare = "tools/Compare-Grids.ps1"
-if (-not (Test-Path $compare)) { throw "Missing $compare" }
-$compareArgs = @('-RunsDir', $RunsDir, '-MaxGrids', $MaxGrids, '-Top', $Top)
-if ($Plot) { $compareArgs += '-Plot' }
-pwsh -File $compare @compareArgs
+# --- Title / Notes prep
+if (-not $Title -or -not $Title.Trim()) { $Title = "$Tag – automated release" }
 
-# Force UTF-8 for Python stdout + console
-[Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
-$env:PYTHONIOENCODING = 'utf-8'
-
-# 2) Build changelog markdown (stdout)
-$md = # Generate changelog with UTF-8 explicitly enabled
-$python = $venvPy
-if (-not $python) { $python = $py }
-if (-not $python) { $python = "python" }
-
-& $python -X utf8 tools/Make-Changelog.py | Set-Content -Encoding UTF8 CHANGELOG.md
-if ($LASTEXITCODE -ne 0) { throw "Make-Changelog failed" }
-if ($LASTEXITCODE -ne 0) { throw "Make-Changelog failed" }
-
-# 3) Compute next tag
-$last = Get-LastTag
-$next = Bump-SemVer $last $Bump
-Write-Host "Last tag: $last  -> Next: $next" -ForegroundColor Cyan
-
-# 4) Write the release notes to a temp file
-$notesPath = Join-Path $env:TEMP ("release_notes_{0}.md" -f $next)
-$md | Set-Content -Encoding UTF8 $notesPath
-
-# 5) Create annotated tag
-git tag -a $newTag -m $tagMessage
-Write-Host "Created tag $next" -ForegroundColor Green
-
-if ($Push) {
-  git push origin $next
-  Write-Host "Pushed tag $next" -ForegroundColor Green
-}
-
-# 6) Optionally create a GitHub release with artifacts via gh CLI
-if ($GithubRelease) {
-  # collect artifacts
-  $latestGrid = (Get-ChildItem $RunsDir -Directory -Filter "ma_grid_*" | Sort-Object LastWriteTime -Desc | Select-Object -First 1)
-  $artifacts = @()
-  $artifacts += (Join-Path $RunsDir "all_grids_combined.csv")
-  $artifacts += (Join-Path $RunsDir "grid_stability_by_bps.csv")
-  $artifacts += (Join-Path $RunsDir "best_params_consensus.csv")
-  if ($latestGrid) {
-    $artifacts += (Join-Path $latestGrid.FullName "heatmap_sharpe.csv")
-    $artifacts += (Join-Path $latestGrid.FullName "heatmap_calmar.csv")
-    $artifacts += (Join-Path $latestGrid.FullName "heatmap_sharpe.png")
-    $artifacts += (Join-Path $latestGrid.FullName "heatmap_calmar.png")
-  }
-  $artifacts = $artifacts | Where-Object { Test-Path $_ }
-
-  $args = @('release','create', $next, '--title', $next, '--notes-file', $notesPath)
-  if ($artifacts.Count -gt 0) { $args += $artifacts }
-
+$notesFile = $null
+if ($Notes -and $Notes.Trim()) {
+  $notesFile = $Notes
+} else {
+  # Try project notes generator; fall back to a simple file
   try {
-    gh @args
-    Write-Host "GitHub release $next created." -ForegroundColor Green
-  } catch {
-    Write-Warning "gh CLI not available or release failed: $($_.Exception.Message)"
-  }
+    if (Test-Path -LiteralPath (Join-Path $root 'tools/Make-Changelog.py')) {
+      Write-Host "• Generating notes via tools/Make-Changelog.py" -ForegroundColor Cyan
+      & python "tools/Make-Changelog.py" | Out-Null
+    }
+  } catch { }
+
+  $notesFile = Join-Path $env:TEMP ("release_notes_{0}.md" -f $Tag)
+  @(
+    "# $Tag",
+    "",
+    "Automated release for **$Tag**.",
+    "",
+    "- CI green",
+    "- Non-interactive publish via tools/New-Release.ps1",
+    ""
+  ) | Set-Content -LiteralPath $notesFile -Encoding utf8
 }
 
-Write-Host "`nDone. Tag: $next  Notes: $notesPath" -ForegroundColor Yellow
+# --- Create or edit release
+$existingUrl = $null
+try {
+  $existingUrl = (gh release view $Tag --json url -q .url 2>$null)
+} catch { }
 
+if ($existingUrl) {
+  Write-Host "• Release exists; updating title/notes" -ForegroundColor Cyan
+  gh release edit $Tag --title $Title --notes-file $notesFile | Out-Null
+  if (-not $NoLatest) {
+    gh release edit $Tag --latest | Out-Null
+  }
+} else {
+  Write-Host "• Creating release $Tag" -ForegroundColor Cyan
+  $args = @('release','create', $Tag, '--title', $Title, '--notes-file', $notesFile)
+  if (-not $NoLatest) { $args += '--latest' }
+  gh @args | Out-Null
+}
 
-
-
-
-
-
-
-gh release create $newTag --title $newTag --notes-file $notesPath --latest
+# --- Print final URL
+$url = gh release view $Tag --json url -q .url
+Write-Host "`n✓ Release ready:" -ForegroundColor Green
+Write-Host $url -ForegroundColor Yellow
