@@ -41,7 +41,7 @@ def main() -> None:
             or f'auto-{datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")}'
         )
         pid = store.record_provenance(args.symbol, "prices", f"csv:{args.csv}", version)
-        n = store.upsert_prices(args.symbol, df, provenance_id=pid)
+        n = store.upsert_prices(args.symbol, df)
         print(f"Upserted {n} rows to FeatureStore; provenance id={pid}")
         return
 
@@ -57,7 +57,7 @@ def main() -> None:
         pid = store.record_provenance(
             args.symbol, "prices", f"yahoo:{args.symbol}", version
         )
-        n = store.upsert_prices(args.symbol, df, provenance_id=pid)
+        n = store.upsert_prices(args.symbol, df)
         print(f"Upserted {n} rows to FeatureStore; provenance id={pid}")
         return
 
