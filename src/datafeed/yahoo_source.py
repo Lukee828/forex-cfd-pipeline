@@ -34,7 +34,7 @@ class YahooPriceSource:
         df = df.reset_index().rename(columns={"Date": "timestamp", "Close": "close"})
         if not pd.api.types.is_datetime64_any_dtype(df["timestamp"]):
             df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
-        df["timestamp"] = df["timestamp"].dt.tz_convert("UTC").dt.tz_localize(None)
+        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True).dt.tz_localize(None)
         return df[["timestamp", "close"]].dropna()
 
     def fetch(self, symbol: str) -> pd.DataFrame:
@@ -46,7 +46,7 @@ class YahooPriceSource:
         # ensure dtypes
         df = df.copy()
         df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True, errors="coerce")
-        df["timestamp"] = df["timestamp"].dt.tz_convert("UTC").dt.tz_localize(None)
+        df["timestamp"] = pd.to_datetime(df["timestamp"], utc=True).dt.tz_localize(None)
         df["close"] = pd.to_numeric(df["close"], errors="coerce")
         out = df.dropna(subset=["timestamp", "close"]).sort_values("timestamp")
         return out.reset_index(drop=True)
