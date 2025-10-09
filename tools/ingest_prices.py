@@ -34,7 +34,7 @@ def main() -> None:
     # CSV path
     if args.csv and CsvPriceSource:
         src = CsvPriceSource(args.csv)
-        df = src.fetch(args.symbol)
+        df = src.fetch(args.yahoo)
         print(f"Loaded {len(df)} rows from CSV: {args.csv}")
         version = (
             args.version
@@ -48,7 +48,7 @@ def main() -> None:
     # Yahoo path
     if args.yahoo and YahooPriceSource:
         src = YahooPriceSource()
-        df = src.fetch(args.symbol)
+        df = src.fetch(args.yahoo)
         print(f"Fetched {len(df)} rows from Yahoo for {args.symbol}")
         version = (
             args.version
