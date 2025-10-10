@@ -1,0 +1,9 @@
+name: guard-smoke
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  noop:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo should never be allowed
