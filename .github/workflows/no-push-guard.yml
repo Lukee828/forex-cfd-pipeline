@@ -1,15 +1,27 @@
-name: "Check for push triggers"
+name: Check for push or pull_request_target triggers
 on:
   pull_request:
   workflow_dispatch:
+
 jobs:
-  no_push_guard:
+  check-forbidden-triggers:
     runs-on: ubuntu-latest
     steps:
-      - name: Scan workflows for forbidden push triggers
+      - uses: actions/checkout@v4
+      - name: Fail if forbidden triggers exist
+        shell: bash
         run: |
-          if grep -R "^[[:space:]]*push:" .github/workflows; then
-            echo "::error::Forbidden 'on: push' trigger found in workflow files."
-            exit 1
-          fi
-          echo "✅ No 'on: push' triggers found."
+          set -euo pipefail
+          shopt -s nullglob
+          files=(.github/workflows/*.yml .github/workflows/*.yaml)
+          banned=('^\s*push\s*:' '^\s*pull_request_target\s*:')
+          bad=0
+          for f in "${files[@]}"; do
+            for pat in "${banned[@]}"; do
+              if grep -P -n "$pat" "$f" >/dev/null 2>&1; then
+                echo "::error file=$f::Forbidden trigger matched pattern: $pat"
+                bad=1
+              fi
+            done
+          done
+          exit $bad
