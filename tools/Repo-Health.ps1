@@ -61,3 +61,17 @@ $hasHook = (Test-Path ".git/hooks/pre-push") -or (Test-Path ".git/hooks/pre-push
 if ($hasHook) { Write-OK "Local pre-push guard present" } else { Write-WARN "Local pre-push guard missing" }
 
 if ($fail) { exit 1 } else { Write-Host "`n✅ Repo health OK" -ForegroundColor Green; exit 0 }
+
+# Recent runs on main (robust)
+try {
+  $recent = gh run list --branch main --limit 5 --json databaseId,workflowName,event,status,conclusion 2>$null | ConvertFrom-Json
+  if ($recent -and $recent.Count -gt 0) {
+    "OK  Recent runs on main:"
+    $recent | ForEach-Object { "   $($_.workflowName) — $($_.event) — $($_.status)/$($_.conclusion)" }
+  } else {
+    "OK  No recent runs on main (or none returned)"
+  }
+} catch {
+  "OK  No recent runs on main (or none returned)"
+}
+# End recent runs
