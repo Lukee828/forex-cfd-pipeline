@@ -1,9 +1,7 @@
 name: Tests (pytest)
 on:
   pull_request:
-  workflow_dispatch:
-
-jobs:
+  workflow_dispatch:jobs:
   test:
     runs-on: ubuntu-latest
     steps:

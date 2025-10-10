@@ -1,9 +1,7 @@
 name: Lint (Ruff + Black)
 on:
   pull_request:
-  workflow_dispatch:
-
-jobs:
+  workflow_dispatch:jobs:
   lint:
     runs-on: windows-latest
     steps:

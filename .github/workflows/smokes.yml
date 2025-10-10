@@ -1,9 +1,7 @@
 name: CI Smokes (PS7)
 on:
   pull_request:
-  workflow_dispatch:
-
-jobs:
+  workflow_dispatch:jobs:
   smokes:
     strategy:
       fail-fast: false
@@ -81,8 +79,7 @@ jobs:
 name: risk-suite
 on:
   pull_request:
-  workflow_dispatch:
-jobs:
+  workflow_dispatch:jobs:
   windows-smoke:
     runs-on: windows-latest
     steps:
