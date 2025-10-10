@@ -1,0 +1,15 @@
+name: "Check for push triggers"
+on:
+  pull_request:
+  workflow_dispatch:
+jobs:
+  no_push_guard:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Scan workflows for forbidden push triggers
+        run: |
+          if grep -R "^[[:space:]]*push:" .github/workflows; then
+            echo "::error::Forbidden 'on: push' trigger found in workflow files."
+            exit 1
+          fi
+          echo "✅ No 'on: push' triggers found."
