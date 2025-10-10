@@ -23,3 +23,5 @@ Run:
 ```powershell
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\Run-FeatureStoreDemo.ps1 -Symbol EURUSD -Rows 10
 ```
+
+Ping: 2025-10-10T09:48:30.8212332+02:00

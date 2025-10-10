@@ -35,10 +35,10 @@ if ((git diff --cached --name-only) -ne $null) {
 git push -u origin HEAD
 
 # --- Create PR (or reuse existing) ---
-$pr = gh pr list --head $Branch --state open --json number -q '.[0].number'
+$pr = gh pr list --head $Branch --state open
 if (-not $pr) {
   try {
-    $pr = gh pr create --base main --head $Branch --title $Title --body $Notes --json number -q .number
+    $pr = gh pr create --base main --head $Branch --title $Title --body $Notes
   } catch {
     Write-Host "Skipping PR creation: $($_.Exception.Message)" -ForegroundColor Yellow
   }
@@ -54,7 +54,7 @@ Write-Host "PR #$pr opened/exists" -ForegroundColor Cyan
 # --- Wait for checks (bounded) ---
 $maxTries = 60  # ~5 min
 for ($i = 0; $i -lt $maxTries; $i++) {
-  $rollup = gh pr view $pr --json statusCheckRollup -q '.statusCheckRollup[].conclusion' 2>$null
+  $rollup = gh pr view $pr
   if ($rollup -contains 'FAILURE') { throw "A required check failed." }
   if ($rollup -and ($rollup -notcontains $null) -and ($rollup -notcontains 'PENDING')) { break }
   Start-Sleep -Seconds 5
@@ -74,7 +74,7 @@ if ($Tag) {
     git tag $Tag
     git push origin $Tag
   }
-  if (-not (gh release view $Tag --json tagName -q .tagName 2>$null)) {
+  if (-not (gh release view $Tag
     gh release create $Tag --title $Title --notes $Notes --latest
   }
   Write-Host "Release ready: $Tag" -ForegroundColor Green
