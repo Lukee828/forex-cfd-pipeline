@@ -38,7 +38,9 @@ def overbalance(pivots: pd.DataFrame, lookback: int = 5) -> pd.DataFrame:
     for i in range(1, len(pidx)):
         curr_mag = swing_mags[i - 1]
         start = max(0, i - lookback)
-        prior = swing_mags[start:i]  # swings before the current one
+        prior = swing_mags[
+            start : i - 1
+        ]  # exclude current swing  # swings before the current one
         if len(prior) > 0 and curr_mag > max(prior):
             over.loc[pidx[i]] = True  # mark on the *ending* pivot of that swing
 
