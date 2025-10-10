@@ -1,1 +1,15 @@
-* text=auto eol=lf
+# Normalize newlines by default; fine-tune below
+*         text=auto eol=lf
+
+# Keep Windows-friendly endings for PowerShell/batch; keep LF for the rest
+*.ps1     text eol=crlf
+*.bat     text eol=crlf
+*.cmd     text eol=crlf
+*.sh      text eol=lf
+*.py      text eol=lf
+*.yml     text eol=lf
+*.yaml    text eol=lf
+*.md      text eol=lf
+
+# Stop silly conflict churn from the heartbeat file
+.meta/nf-ping.txt merge=ours eol=lf
