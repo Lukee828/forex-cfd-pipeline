@@ -61,3 +61,7 @@ runs/
 # Python build/cache
 __pycache__/
 *.pyc
+
+# temp files from manual merges
+ours.ps1
+theirs.ps1
