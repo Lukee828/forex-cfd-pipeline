@@ -1,6 +1,12 @@
+import pytest
+
+
 import pandas as pd
 from datetime import datetime, timezone
 from datafeed.yahoo_source import YahooPriceSource
+
+
+pytestmark = pytest.mark.network
 
 
 def _stub_downloader_ok(ticker: str) -> pd.DataFrame:
@@ -12,6 +18,7 @@ def _stub_downloader_bad(ticker: str) -> pd.DataFrame:
     return pd.DataFrame({"foo": [1, 2, 3]})
 
 
+@pytest.mark.network
 def test_yahoo_stub_fetch_ok():
     src = YahooPriceSource(downloader=_stub_downloader_ok)
     df = src.fetch("EURUSD=X")
@@ -22,6 +29,7 @@ def test_yahoo_stub_fetch_ok():
     assert (df["timestamp"].diff().dropna() > pd.Timedelta(0)).all()
 
 
+@pytest.mark.network
 def test_yahoo_stub_fetch_bad_raises():
     src = YahooPriceSource(downloader=_stub_downloader_bad)
     try:
