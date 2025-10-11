@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from .conftest import find_ob_func
+from conftest import find_ob_func
 
 
 def _df(o, h, lo, c):
