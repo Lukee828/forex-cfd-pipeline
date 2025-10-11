@@ -23,3 +23,15 @@ jobs:
       - run: pip install -r requirements.txt -r requirements-dev.txt
       - run: pre-commit run --all-files
       - run: pytest -q --cov=src --cov-report=xml
+
+# --- analytics reports ---
+      - name: Feature importance demo (optional)
+        if: ${{ always() }}
+        run: pwsh -NoProfile -File tools/Run-FeatureImportance.ps1
+
+      - name: Upload analytics reports
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: analytics-reports
+          path: reports/**
