@@ -65,3 +65,6 @@ __pycache__/
 # temp files from manual merges
 ours.ps1
 theirs.ps1
+
+# local helpers
+/tools/Diag-GH.ps1
