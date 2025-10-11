@@ -1,4 +1,4 @@
-﻿# Python
+# Python
 __pycache__/
 *.py[cod]
 .venv/
@@ -65,3 +65,4 @@ __pycache__/
 # temp files from manual merges
 ours.ps1
 theirs.ps1
+tools/AutoMerge-Pr.ps1

@@ -8,6 +8,10 @@ jobs:
   lint:
     runs-on: windows-latest
     steps:
+      - name: Ensure Matplotlib Agg backend
+        shell: pwsh
+        run: ./tools/ensure-agg.ps1
+
       - uses: actions/checkout@v4
         with:
           lfs: true

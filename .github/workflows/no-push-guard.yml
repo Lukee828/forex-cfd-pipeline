@@ -7,6 +7,10 @@ jobs:
   check-forbidden-triggers:
     runs-on: ubuntu-latest
     steps:
+      - name: Ensure Matplotlib Agg backend
+        shell: pwsh
+        run: ./tools/ensure-agg.ps1
+
       - uses: actions/checkout@v4
       - name: Fail if forbidden triggers exist
         shell: bash

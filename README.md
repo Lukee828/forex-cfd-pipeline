@@ -25,3 +25,18 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\Run-FeatureStoreDemo.ps1 -
 ```
 
 Ping: 2025-10-10T09:48:30.8212332+02:00
+
+### Headless Matplotlib in CI
+We run Matplotlib in headless mode to avoid GUI backends (e.g., Tk).
+The PowerShell 7 script below verifies an Agg backend is available in CI:
+
+```pwsh
+./tools/ensure-agg.ps1
+```
+
+This script:
+- Confirms Python + Matplotlib import;
+- Prints current backend and verifies Agg import path;
+- Exits non-zero on failure (CI fails fast).
+
+Executed automatically in GitHub Actions before `pytest`.
