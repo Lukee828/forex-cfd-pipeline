@@ -72,7 +72,7 @@ class FeatureStore:
 
     def pivot_wide(self, symbol: str, start: str = None, end: str = None, ver: str | None = None):
         df = self.query(symbol, start, end, ver)
-        if df.empty: 
+        if df.empty:
             return df
         out = df.pivot(index='ts', columns='name', values='value').reset_index()
         return out
