@@ -1,6 +1,12 @@
+import pytest
+
+
 import pandas as pd
 
 from datafeed.yahoo_source import YahooPriceSource
+
+
+pytestmark = pytest.mark.network
 
 
 def _stub_multiindex_cols(_ticker: str) -> pd.DataFrame:
@@ -19,6 +25,7 @@ def _stub_tz_naive_index(_ticker: str) -> pd.DataFrame:
     return df
 
 
+@pytest.mark.network
 def test_yahoo_multiindex_columns_are_flattened():
     src = YahooPriceSource(downloader=_stub_multiindex_cols)
     out = src.fetch("AAPL")
@@ -27,6 +34,7 @@ def test_yahoo_multiindex_columns_are_flattened():
     assert out["close"].iloc[0] == 1.0
 
 
+@pytest.mark.network
 def test_yahoo_tz_naive_is_handled():
     src = YahooPriceSource(downloader=_stub_tz_naive_index)
     out = src.fetch("AAPL")
