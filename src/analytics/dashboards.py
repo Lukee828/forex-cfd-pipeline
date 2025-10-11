@@ -1,10 +1,12 @@
+from __future__ import annotations
+
 # Headless-safe Matplotlib backend for CI and non-GUI environments
 import os as _os
 import matplotlib
 
 if _os.environ.get("MPLBACKEND") is None:
     matplotlib.use("Agg")
-from __future__ import annotations
+
 import io
 import base64
 from pathlib import Path
