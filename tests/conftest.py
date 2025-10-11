@@ -1,3 +1,7 @@
+import tempfile
+import shutil
+import pytest
+
 # tests/conftest.py
 import importlib
 
@@ -32,3 +36,14 @@ def find_ob_func():
             if callable(f):
                 return f
     return None
+
+
+@pytest.fixture(autouse=True)
+def _tmp_registry_dir(monkeypatch):
+    d = tempfile.mkdtemp(prefix="registry_")
+    # if your code reads something like REGISTRY_DB / ALPHA_DB / DUCKDB_PATH – adjust the name here:
+    monkeypatch.setenv("ALPHA_REGISTRY_DIR", d)
+    try:
+        yield d
+    finally:
+        shutil.rmtree(d, ignore_errors=True)
