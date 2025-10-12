@@ -83,3 +83,7 @@ _demo_registry_export.csv
 _demo_registry.duckdb
 registry.duckdb
 _demo_registry_export.csv
+
+# Local DuckDB demo/test databases
+*_search.duckdb
+_demo_registry.duckdb
