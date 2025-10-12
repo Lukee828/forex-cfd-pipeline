@@ -9,6 +9,47 @@ import alpha_factory.alpha_registry_schema_v025  # noqa: F401
 from alpha_factory.alpha_registry import AlphaRegistry
 
 
+def _wrap_summary_html(html_table: str, theme: str = "light") -> str:
+    """Wrap a pandas HTML table with a minimal theme."""
+    theme = (theme or "light").lower()
+    if theme not in ("light", "dark"):
+        theme = "light"
+
+    # colors
+    if theme == "dark":
+        page_bg = "#111"
+        table_bg = "#181818"
+        text = "#e8e8e8"
+        border = "#333"
+        zebra = "#202020"
+        link = "#9ad"
+    else:
+        page_bg = "#fff"
+        table_bg = "#fff"
+        text = "#222"
+        border = "#ddd"
+        zebra = "#f9f9f9"
+        link = "#06c"
+
+    style = (
+        "<style>"
+        "html,body{margin:0;padding:0;background:"
+        + page_bg
+        + ";color:"
+        + text
+        + ";font:14px/1.4 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif}"
+        "a{color:" + link + "}"
+        "table{border-collapse:collapse;background:"
+        + table_bg
+        + ";margin:16px auto;min-width:320px}"
+        "thead th{position:sticky;top:0;background:" + table_bg + "}"
+        "td,th{padding:6px 10px;border:1px solid " + border + "}"
+        "tbody tr:nth-child(even) td{background:" + zebra + "}"
+        "</style>"
+    )
+    return f"<!doctype html><meta charset='utf-8'>{style}\n{html_table}\n"
+
+
 def _mk_reg(db: str) -> AlphaRegistry:
     sig = AlphaRegistry.__init__.__code__.co_varnames
     if "db_path" in sig:
@@ -98,6 +139,7 @@ def main(argv=None) -> int:
     ex.add_argument("--metric", required=True)
     ex.add_argument("--top", type=int, default=10)  # used for best
     ex.add_argument("--format", choices=["csv", "html"], default="csv")
+    ex.add_argument("--theme", choices=["light", "dark"], default="light")
     ex.add_argument("--out", required=True)
 
     a = p.parse_args(argv)
