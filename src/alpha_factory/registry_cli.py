@@ -36,18 +36,17 @@ def _parse_metrics(s: str) -> dict:
 
 
 def _ensure_runs_view(con: duckdb.DuckDBPyConnection):
-    # Always (re)build from alphas for deterministic results
+    # Always (re)build FROM alphas a for deterministic results
     con.execute(
         """
         CREATE OR REPLACE VIEW runs AS
-        SELECT
-          CAST(config_hash AS VARCHAR) AS alpha_id,
+SELECT CAST(config_hash AS VARCHAR) AS alpha_id,
           CAST(id AS VARCHAR)          AS run_id,
-          COALESCE(timestamp, CURRENT_TIMESTAMP) AS timestamp,
+          CURRENT_TIMESTAMP AS timestamp,
           tags,
           CAST(metrics AS JSON)        AS metrics,
           config_hash
-        FROM alphas
+        FROM alphas a
     """
     )
 

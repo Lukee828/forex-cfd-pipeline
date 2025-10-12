@@ -2,32 +2,23 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Iterable
-
-import duckdb
 import json
+import duckdb
 
 
 class AlphaRegistry:
     """
-    Minimal registry for alpha runs.
-
-    Storage (DuckDB):
-      table alphas(
-        id BIGINT PRIMARY KEY,     -- portable; managed by us
-        ts TIMESTAMP NOT NULL DEFAULT now(),
-        config_hash TEXT NOT NULL,
-        metrics TEXT NOT NULL,     -- JSON string
-        tags TEXT NOT NULL         -- comma-separated, sorted & deduped
-      )
+    Minimal registry for alpha runs (DuckDB).
+    Table: alphas(id BIGINT PK, ts TIMESTAMP, config_hash TEXT, metrics TEXT(JSON), tags TEXT)
     """
 
     def __init__(self, db_path: str | Path):
-        self.db_path = Path(db_path)
+        self.db_path = str(db_path)
 
-    # ---- lifecycle ----
+    # Optional initializer if callers want to pre-create schema
     def init(self) -> "AlphaRegistry":
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-        con = duckdb.connect(str(self.db_path))
+        Path(self.db_path).parent.mkdir(parents=True, exist_ok=True)
+        con = duckdb.connect(self.db_path)
         try:
             con.execute(
                 """
@@ -44,6 +35,20 @@ class AlphaRegistry:
             con.close()
         return self
 
+    # Internal helper to ensure schema *inside* transactions
+    def _ensure_schema(self, con) -> None:
+        con.execute(
+            """
+            CREATE TABLE IF NOT EXISTS alphas (
+              id BIGINT PRIMARY KEY,
+              ts TIMESTAMP NOT NULL DEFAULT now(),
+              config_hash TEXT NOT NULL,
+              metrics TEXT NOT NULL,
+              tags TEXT NOT NULL
+            );
+            """
+        )
+
     # ---- writes ----
     def register(
         self,
@@ -56,9 +61,10 @@ class AlphaRegistry:
         tags_s = ",".join(sorted(set(str(t).strip() for t in tags if str(t).strip())))
         mjson = json.dumps(metrics or {}, sort_keys=True, separators=(",", ":"))
 
-        con = duckdb.connect(str(self.db_path))
+        con = duckdb.connect(self.db_path)
         try:
             con.execute("BEGIN")
+            self._ensure_schema(con)  # make the table if missing
             next_id = con.execute(
                 "SELECT COALESCE(MAX(id), 0) + 1 FROM alphas;"
             ).fetchone()[0]
@@ -80,7 +86,7 @@ class AlphaRegistry:
         Return top-n rows ordered by the JSON metric (desc), with a computed 'score' column last.
         Row columns: (id, ts, config_hash, metrics, tags, score)
         """
-        con = duckdb.connect(str(self.db_path))
+        con = duckdb.connect(self.db_path)
         try:
             rows = con.execute(
                 f"""
@@ -98,11 +104,8 @@ class AlphaRegistry:
         return list(rows)
 
     def list_recent(self, tag: str | None = None, limit: int = 10) -> list[tuple]:
-        """
-        Return recent rows (id, ts, config_hash, metrics, tags), newest first.
-        If 'tag' is provided, filter by substring match within tags list.
-        """
-        con = duckdb.connect(str(self.db_path))
+        """Return recent rows (id, ts, config_hash, metrics, tags), newest first."""
+        con = duckdb.connect(self.db_path)
         try:
             if tag:
                 rows = con.execute(
@@ -130,11 +133,8 @@ class AlphaRegistry:
         return list(rows)
 
     def get_latest(self, tag: str | None = None) -> tuple | None:
-        """
-        Return newest row (id, ts, config_hash, metrics, tags).
-        If tag provided, filter by substring match inside 'tags'.
-        """
-        con = duckdb.connect(str(self.db_path))
+        """Return newest row (id, ts, config_hash, metrics, tags)."""
+        con = duckdb.connect(self.db_path)
         try:
             if tag:
                 q = """
@@ -171,12 +171,11 @@ class AlphaRegistry:
         Optional bounds: min/max. Optional tag substring filter.
         Ordered by score DESC NULLS LAST, ts DESC, id DESC.
         """
-        con = duckdb.connect(str(self.db_path))
+        con = duckdb.connect(self.db_path)
         try:
             clauses: list[str] = []
             params: list[object] = []
 
-            # DuckDB 1.1.x-compatible scalar extraction (no json_extract_scalar)
             score_expr = f"CAST(json_extract(metrics, '$.{metric}') AS DOUBLE)"
 
             if min is not None:
@@ -201,3 +200,28 @@ class AlphaRegistry:
             return con.execute(sql, params).fetchall()
         finally:
             con.close()
+
+
+# --- Back-compat for older CLI/tests ---
+# Expose public ensure_schema() that delegates to the internal method.
+try:
+    # If the attribute doesn't exist, hasattr==False
+    pass
+finally:
+    if not hasattr(AlphaRegistry, "ensure_schema"):
+        AlphaRegistry.ensure_schema = AlphaRegistry._ensure_schema
+
+
+# --- Back-compat: public ensure_schema() that manages its own connection
+def _compat_ensure_schema(self):
+    import duckdb
+
+    con = duckdb.connect(str(self.db_path))
+    try:
+        self._ensure_schema(con)
+    finally:
+        con.close()
+
+
+# Expose as public method expected by older CLI/tests
+AlphaRegistry.ensure_schema = _compat_ensure_schema
