@@ -1,83 +1,102 @@
 from __future__ import annotations
+
 import hashlib
 import json
-from dataclasses import dataclass
+import os
+import pickle
 from pathlib import Path
-from typing import Any, Dict, Optional
-
-import pandas as pd
+from typing import Any, Iterable, Optional
 
 
-@dataclass(frozen=True)
-class FeatureKey:
-    name: str
-    version: str
-    params_hash: str
-    schema_hash: str
-
-    def as_str(self) -> str:
-        return (
-            f"{self.name}-{self.version}-{self.params_hash[:8]}-{self.schema_hash[:8]}"
-        )
+def _normalize_key(key: Any) -> str:
+    """
+    Convert a user key into a deterministic JSON string (ASCII, sorted keys, no spaces).
+    Ensures stable hashing → stable filenames for the same logical key.
+    """
+    return json.dumps(key, sort_keys=True, separators=(",", ":"), ensure_ascii=True)
 
 
-def _stable_hash(obj: Any) -> str:
-    """Hash Python obj via canonical JSON (sorted keys, no whitespace)."""
-    blob = json.dumps(obj, sort_keys=True, separators=(",", ":"), default=str)
-    return hashlib.sha256(blob.encode("utf-8")).hexdigest()
-
-
-def _schema_signature(df: pd.DataFrame) -> Dict[str, str]:
-    # map column -> dtype.name (string)
-    return {str(c): str(df.dtypes[c].name) for c in df.columns}
+def _key_sha1(key: Any) -> str:
+    return hashlib.sha1(_normalize_key(key).encode("ascii")).hexdigest()
 
 
 class FeatureStore:
     """
-    Minimal local feature store (pickle backend) to unblock tests.
-    Writes to `.fs/<name>/<key>.pkl`. Next PRs: DuckDB + provenance.
+    Minimal local feature store with atomic writes and deterministic file names.
+
+    Layout:
+      root/
+        objects/<sha1>.pkl
     """
 
-    def __init__(self, root: Path | str = ".fs"):
+    def __init__(self, root: os.PathLike[str] | str):
         self.root = Path(root)
+        self.objects = self.root / "objects"
+        self.objects.mkdir(parents=True, exist_ok=True)
 
-    def _key_for(
-        self,
-        name: str,
-        df: pd.DataFrame,
-        params: Optional[Dict[str, Any]] = None,
-        version: str = "v1",
-    ) -> FeatureKey:
-        params = params or {}
-        p_hash = _stable_hash({"name": name, "version": version, "params": params})
-        s_hash = _stable_hash(_schema_signature(df))
-        return FeatureKey(
-            name=name, version=version, params_hash=p_hash, schema_hash=s_hash
-        )
+    # --------- public API ---------
 
-    def _path_for(self, fk: FeatureKey) -> Path:
-        return self.root / fk.name / f"{fk.as_str()}.pkl"
+    def put(self, key: Any, value: Any, *, overwrite: bool = False) -> Path:
+        """
+        Persist value under key. If overwrite=False and object exists, raise FileExistsError.
+        Returns the path to the stored object.
+        """
+        path = self._path_for_key(key)
+        if path.exists() and not overwrite:
+            raise FileExistsError(
+                f"Feature already exists for key={key!r} ({path.name})"
+            )
 
-    def put(
-        self,
-        name: str,
-        df: pd.DataFrame,
-        *,
-        params: Optional[Dict[str, Any]] = None,
-        version: str = "v1",
-    ) -> str:
-        fk = self._key_for(name, df, params=params, version=version)
-        path = self._path_for(fk)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        # Pickle keeps index/types; lightweight for now
-        df.to_pickle(path)
-        return fk.as_str()
+        self._atomic_write(path, value)
+        return path
 
-    def get(self, name: str, key: str) -> pd.DataFrame:
-        path = self.root / name / f"{key}.pkl"
-        if not path.exists():
-            raise FileNotFoundError(f"No artifact for {name=} {key=}")
-        return pd.read_pickle(path)
+    def get(self, key: Any) -> Any:
+        path = self._path_for_key(key)
+        with path.open("rb") as f:
+            return pickle.load(f)
 
-    def exists(self, name: str, key: str) -> bool:
-        return (self.root / name / f"{key}.pkl").exists()
+    def exists(self, key: Any) -> bool:
+        return self._path_for_key(key).exists()
+
+    def delete(self, key: Any) -> None:
+        p = self._path_for_key(key)
+        if p.exists():
+            p.unlink()
+
+    def list(self, prefix: Optional[str] = None) -> Iterable[str]:
+        """
+        List normalized keys we can recover from filenames: returns sha1 digests.
+        (We don’t store reverse mapping; consumers compare by key→sha1.)
+        If prefix is provided, filter digests starting with that prefix.
+        """
+        for p in sorted(self.objects.glob("*.pkl")):
+            digest = p.stem
+            if prefix is None or digest.startswith(prefix):
+                yield digest
+
+    # --------- internals ---------
+
+    def _path_for_key(self, key: Any) -> Path:
+        return self.objects / f"{_key_sha1(key)}.pkl"
+
+    def _atomic_write(self, dst: Path, value: Any) -> None:
+        """
+        Write to a same-dir temporary file, then os.replace() → atomic on POSIX & Windows.
+        Ensures no partial files are left on failure.
+        """
+        tmp = dst.with_suffix(".tmp." + os.urandom(4).hex())
+        try:
+            with tmp.open("wb") as f:
+                # protocol 4 is widely compatible (3.4+), good enough for CI
+                pickle.dump(value, f, protocol=4)
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(tmp, dst)
+        except Exception:
+            # Best-effort cleanup if something fails before replace
+            try:
+                if tmp.exists():
+                    tmp.unlink()
+            except Exception:
+                pass
+            raise
