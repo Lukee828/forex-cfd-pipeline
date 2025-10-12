@@ -1,0 +1,5 @@
+registry:
+  path: data/registry.duckdb
+  auto_backup: false
+  backup_dir: data/backups/
+  retention_days: 30
