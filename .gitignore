@@ -91,3 +91,7 @@ _demo_registry.duckdb
 # Registry exports/artifacts
 artifacts/**
 !artifacts/.gitkeep
+
+# v0.2.8 exports
+/best_v028.csv
+/summary_v028.html
