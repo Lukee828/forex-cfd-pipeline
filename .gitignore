@@ -68,3 +68,8 @@ theirs.ps1
 
 # local helpers
 /tools/Diag-GH.ps1
+
+# local virtualenvs
+.venv*/
+venv*/
+**/.venv*/
