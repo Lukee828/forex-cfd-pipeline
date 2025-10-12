@@ -73,3 +73,13 @@ theirs.ps1
 .venv*/
 venv*/
 **/.venv*/
+
+# Demo/registry artifacts
+_demo_registry.duckdb
+registry.duckdb
+_demo_registry_export.csv
+
+# Demo/registry artifacts
+_demo_registry.duckdb
+registry.duckdb
+_demo_registry_export.csv
