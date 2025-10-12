@@ -1,4 +1,4 @@
-import alpha_factory.alpha_registry_ext_overrides_024  # install v0.2.4 overrides\nimport pandas as pd
+import alpha_factory.alpha_registry_ext_overrides_024  # install v0.2.4 overrides
 
 # Install extensions (adds methods + auto "runs" view)
 try:
