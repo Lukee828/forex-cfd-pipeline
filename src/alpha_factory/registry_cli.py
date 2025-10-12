@@ -1,8 +1,10 @@
 from __future__ import annotations
 import argparse
 import json
+import os
+import duckdb
 
-# Patch analytics + schema helpers
+# Keep schema helpers import (side-effect OK)
 import alpha_factory.alpha_registry_schema_v025  # noqa: F401
 from alpha_factory.alpha_registry import AlphaRegistry
 
@@ -15,21 +17,49 @@ def _mk_reg(db: str) -> AlphaRegistry:
         return AlphaRegistry(path=db)
     if "database" in sig:
         return AlphaRegistry(database=db)
-    return AlphaRegistry(db)  # last resort
+    return AlphaRegistry(db)
 
 
 def _parse_metrics(s: str) -> dict:
     if not s:
         return {}
-    if s.strip().startswith("{"):
+    s = s.strip()
+    if s.startswith("{"):
         return json.loads(s)
-    out = {}
+    out: dict[str, float] = {}
     for pair in s.split(","):
         if not pair.strip():
             continue
         k, v = pair.split("=", 1)
         out[k.strip()] = float(v.strip())
     return out
+
+
+def _ensure_runs_view(con: duckdb.DuckDBPyConnection):
+    # Always (re)build from alphas for deterministic results
+    con.execute(
+        """
+        CREATE OR REPLACE VIEW runs AS
+        SELECT
+          CAST(config_hash AS VARCHAR) AS alpha_id,
+          CAST(id AS VARCHAR)          AS run_id,
+          COALESCE(timestamp, CURRENT_TIMESTAMP) AS timestamp,
+          tags,
+          CAST(metrics AS JSON)        AS metrics,
+          config_hash
+        FROM alphas
+    """
+    )
+
+
+def _json_metric_expr(metric: str) -> str:
+    # Works for numeric or quoted JSON values
+    return (
+        "COALESCE("
+        " TRY_CAST(json_extract(metrics, '$.{m}') AS DOUBLE),"
+        " TRY_CAST(CAST(json_extract(metrics, '$.{m}') AS VARCHAR) AS DOUBLE)"
+        " )"
+    ).format(m=metric)
 
 
 def main(argv=None) -> int:
@@ -53,6 +83,23 @@ def main(argv=None) -> int:
     bk = sub.add_parser("backup")
     bk.add_argument("--retention", type=int)
     bk.add_argument("--dir")
+    sub.add_parser("refresh-runs")
+    sr = sub.add_parser("search")  # new
+    sr.add_argument("--metric", required=True)
+    sr.add_argument("--min", type=float)
+    sr.add_argument("--max", type=float)
+    sr.add_argument("--tag")
+    sr.add_argument("--limit", type=int, default=50)
+
+    ln = sub.add_parser("lineage")  # new
+    ln.add_argument("--alpha", required=True)
+
+    ex = sub.add_parser("export")  # new
+    ex.add_argument("--what", choices=["best", "summary"], required=True)
+    ex.add_argument("--metric", required=True)
+    ex.add_argument("--top", type=int, default=10)  # used for best
+    ex.add_argument("--format", choices=["csv", "html"], default="csv")
+    ex.add_argument("--out", required=True)
 
     a = p.parse_args(argv)
     reg = _mk_reg(a.db)
@@ -74,31 +121,16 @@ def main(argv=None) -> int:
             print(r)
         return 0
 
-    if a.cmd == "best":
-        import duckdb
-
-        # Rebuild runs view directly from alphas (fresh)
+    if a.cmd == "refresh-runs":
         con = duckdb.connect(a.db)
-        con.execute(
-            """
-            CREATE OR REPLACE VIEW runs AS
-            SELECT
-              CAST(config_hash AS VARCHAR) AS alpha_id,
-              CAST(id AS VARCHAR)          AS run_id,
-              COALESCE(timestamp, CURRENT_TIMESTAMP) AS timestamp,
-              tags,
-              CAST(metrics AS JSON)        AS metrics,
-              config_hash
-            FROM alphas
-        """
-        )
-        # Robust metric extraction (numeric or quoted)
-        val = (
-            "COALESCE("
-            " TRY_CAST(json_extract(metrics, '$.{m}') AS DOUBLE),"
-            " TRY_CAST(CAST(json_extract(metrics, '$.{m}') AS VARCHAR) AS DOUBLE)"
-            " )"
-        ).format(m=a.metric)
+        _ensure_runs_view(con)
+        print("OK: runs view refreshed")
+        return 0
+
+    if a.cmd == "best":
+        con = duckdb.connect(a.db)
+        _ensure_runs_view(con)
+        val = _json_metric_expr(a.metric)
         q = f"""
         WITH base AS (
           SELECT alpha_id, run_id, timestamp, tags, {val} AS value
@@ -115,29 +147,9 @@ def main(argv=None) -> int:
         return 0
 
     if a.cmd == "summary":
-        import duckdb
-
         con = duckdb.connect(a.db)
-        # Ensure fresh runs view
-        con.execute(
-            """
-            CREATE OR REPLACE VIEW runs AS
-            SELECT
-              CAST(config_hash AS VARCHAR) AS alpha_id,
-              CAST(id AS VARCHAR)          AS run_id,
-              COALESCE(timestamp, CURRENT_TIMESTAMP) AS timestamp,
-              tags,
-              CAST(metrics AS JSON)        AS metrics,
-              config_hash
-            FROM alphas
-        """
-        )
-        val = (
-            "COALESCE("
-            " TRY_CAST(json_extract(metrics, '$.{m}') AS DOUBLE),"
-            " TRY_CAST(CAST(json_extract(metrics, '$.{m}') AS VARCHAR) AS DOUBLE)"
-            " )"
-        ).format(m=a.metric)
+        _ensure_runs_view(con)
+        val = _json_metric_expr(a.metric)
         q = f"""
         WITH base AS (
           SELECT alpha_id, run_id, timestamp, tags, {val} AS value
@@ -159,6 +171,90 @@ def main(argv=None) -> int:
         """
         df = con.execute(q).df()
         print(df.to_string(index=False))
+        return 0
+
+    if a.cmd == "search":
+        con = duckdb.connect(a.db)
+        _ensure_runs_view(con)
+        val = _json_metric_expr(a.metric)
+        where = ["value IS NOT NULL"]
+        params: list[object] = []
+        if a.min is not None:
+            where.append("value >= ?")
+            params.append(float(a.min))
+        if a.max is not None:
+            where.append("value <= ?")
+            params.append(float(a.max))
+        if a.tag:
+            where.append("contains(tags, ?)")
+            params.append(a.tag)
+        q = f"""
+        WITH base AS (
+          SELECT alpha_id, run_id, timestamp, tags, {val} AS value
+          FROM runs
+        )
+        SELECT alpha_id, run_id, timestamp, tags, value
+        FROM base
+        WHERE {' AND '.join(where)}
+        ORDER BY value DESC, timestamp DESC
+        LIMIT {int(a.limit)}
+        """
+        print(duckdb.connect(a.db).execute(q, params).df().to_string(index=False))
+        return 0
+
+    if a.cmd == "lineage":
+        # Through overrides (already shipped in v0.2.5)
+        try:
+            import alpha_factory.alpha_registry_ext_overrides_024 as _ovr  # noqa: F401
+        except Exception:
+            pass
+        df = reg.get_lineage(a.alpha)
+        print(df.to_string(index=False))
+        return 0
+
+    if a.cmd == "export":
+        con = duckdb.connect(a.db)
+        _ensure_runs_view(con)
+        val = _json_metric_expr(a.metric)
+        if a.what == "best":
+            q = f"""
+            WITH base AS (
+              SELECT alpha_id, run_id, timestamp, tags, {val} AS value
+              FROM runs
+            )
+            SELECT alpha_id, run_id, timestamp, tags, value
+            FROM base
+            WHERE value IS NOT NULL
+            ORDER BY value DESC
+            LIMIT {int(a.top)}
+            """
+        else:  # summary
+            q = f"""
+            WITH base AS (
+              SELECT alpha_id, run_id, timestamp, tags, {val} AS value
+              FROM runs
+            )
+            SELECT alpha_id,
+                   COUNT(*) AS n,
+                   AVG(value) AS mean,
+                   STDDEV_SAMP(value) AS std,
+                   MIN(value) AS min,
+                   quantile(value, 0.25) AS q25,
+                   MEDIAN(value) AS median,
+                   quantile(value, 0.75) AS q75,
+                   MAX(value) AS max
+            FROM base
+            WHERE value IS NOT NULL
+            GROUP BY alpha_id
+            ORDER BY mean DESC
+            """
+        df = con.execute(q).df()
+        os.makedirs(os.path.dirname(a.out) or ".", exist_ok=True)
+        if a.format == "csv":
+            df.to_csv(a.out, index=False)
+        else:
+            df.to_html(a.out, index=False)
+        print(a.out)
         return 0
 
     if a.cmd == "backup":

@@ -87,3 +87,7 @@ _demo_registry_export.csv
 # Local DuckDB demo/test databases
 *_search.duckdb
 _demo_registry.duckdb
+
+# Registry exports/artifacts
+artifacts/**
+!artifacts/.gitkeep
