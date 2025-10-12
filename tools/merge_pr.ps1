@@ -22,7 +22,7 @@ if (-not $PR) {
 Write-Host "→ PR #$PR status:"
 $viewArgs = @(
   "pr","view","$PR",
-  "--web=false",
+  "",
   "--json","title,headRefName,baseRefName,state",
   "--template","  {{.title}}  ({{.state}})  head={{.headRefName}} -> base={{.baseRefName}}"
 )
