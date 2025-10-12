@@ -1,120 +1,29 @@
-﻿# Python
+# --- Python / build ---
 __pycache__/
 *.py[cod]
-.venv/
-.env
 *.egg-info/
+build/
+dist/
+.venv*/
+.env
+.pytest_cache/
+.coverage
+htmlcov/
 
-# Notebooks/plots/cache
-.ipynb_checkpoints/
-
-# Local data & outputs
-data/raw/
-data/tmp/
-executions/
-logs/
-signals/
-runs/
-*.log
-*.csv
-
-# OS/editor
+# --- IDE / OS ---
 .DS_Store
 Thumbs.db
 .vscode/
 .idea/
 
-# Secrets (prevent accidents)
-config/*.secrets.*
-config/local.*
-# keep canonical config csvs
-!config/*.csv
+# --- Project generated content ---
+# Keep fixtures under tests/**, but ignore demo/reports artifacts
+demos/**/outputs/
+demos/**/artifacts/
+reports/**
+run-*/        # transient run logs/dirs
+logs/**
+*.log
 
-
-__backup_*/
-reports/
-notebooks/
-
-.precommit_cache/
-
-.tmp_fix_cfg.py
-config/production.yaml.bak_*
-
-*.bak
-
-*.bak_*
-
-tools/*.ps1.bak
-
-.tmp_*
-# repo hygiene
-.backup/
-*.diff
-*.bak
-*.tmp
-mypy.ini
-# Local data & runs
-.data/
-runs/
-*.db
-
-# Python build/cache
-__pycache__/
-*.pyc
-
-# temp files from manual merges
-ours.ps1
-theirs.ps1
-
-# local helpers
-/tools/Diag-GH.ps1
-
-# local virtualenvs
-.venv*/
-venv*/
-**/.venv*/
-
-# Demo/registry artifacts
-_demo_registry.duckdb
-registry.duckdb
-_demo_registry_export.csv
-
-# Demo/registry artifacts
-_demo_registry.duckdb
-registry.duckdb
-_demo_registry_export.csv
-
-# Local DuckDB demo/test databases
-*_search.duckdb
-_demo_registry.duckdb
-
-# Registry exports/artifacts
-artifacts/**
-!artifacts/.gitkeep
-
-# v0.2.8 exports
-/best_v028.csv
-/summary_v028.html
-# local temp DBs / artifacts
-*.duckdb
-artifacts/**
-!artifacts/.gitkeep
-summary_*.html
-best_*.csv
-
-# mkdocs
-site/
-# build artifacts
-build/
-dist/
-site/
-*.egg-info/
-
-# CLI smoke artifacts
-cli_*.csv
-cli_*.html
-*_smoke.duckdb
-# CLI smoke artifacts
-cli_*.csv
-cli_*.html
-*_smoke.duckdb
+# --- Notebooks ---
+*.ipynb_checkpoints/
