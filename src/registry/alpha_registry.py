@@ -86,7 +86,7 @@ class AlphaRegistry:
                 f"""
                 SELECT
                   id, ts, config_hash, metrics, tags,
-                  CAST(json_extract(metrics, '$."{metric}"') AS DOUBLE) AS score
+                  CAST(json_extract(metrics, '$.{metric}') AS DOUBLE) AS score
                 FROM alphas
                 ORDER BY score DESC NULLS LAST, id ASC
                 LIMIT ?;
@@ -129,41 +129,75 @@ class AlphaRegistry:
             con.close()
         return list(rows)
 
+    def get_latest(self, tag: str | None = None) -> tuple | None:
+        """
+        Return newest row (id, ts, config_hash, metrics, tags).
+        If tag provided, filter by substring match inside 'tags'.
+        """
+        con = duckdb.connect(str(self.db_path))
+        try:
+            if tag:
+                q = """
+                SELECT id, ts, config_hash, metrics, tags
+                FROM alphas
+                WHERE position(? in tags) > 0
+                ORDER BY ts DESC, id DESC
+                LIMIT 1;
+                """
+                rows = con.execute(q, [tag]).fetchall()
+            else:
+                q = """
+                SELECT id, ts, config_hash, metrics, tags
+                FROM alphas
+                ORDER BY ts DESC, id DESC
+                LIMIT 1;
+                """
+                rows = con.execute(q).fetchall()
+            return rows[0] if rows else None
+        finally:
+            con.close()
 
-# --- extension: get_latest(tag: str | None = None) -----------------------------------
-def _alpha_get_latest(self, tag: str | None = None):
-    """
-    Return newest row (id, ts, config_hash, metrics, tags). If tag provided,
-    filter by substring match inside 'tags' (comma-separated string).
-    """
-    import duckdb
+    def search(
+        self,
+        metric: str,
+        min: float | None = None,
+        max: float | None = None,
+        tag: str | None = None,
+        limit: int = 50,
+    ) -> list[tuple]:
+        """
+        Return rows (id, ts, config_hash, metrics, tags, score) where
+        score = CAST(json_extract(metrics, '$.{metric}') AS DOUBLE).
+        Optional bounds: min/max. Optional tag substring filter.
+        Ordered by score DESC NULLS LAST, ts DESC, id DESC.
+        """
+        con = duckdb.connect(str(self.db_path))
+        try:
+            clauses: list[str] = []
+            params: list[object] = []
 
-    con = duckdb.connect(str(self.db_path))
-    try:
-        if tag:
-            q = """
-            SELECT id, ts, config_hash, metrics, tags
-            FROM alphas
-            WHERE position(? in tags) > 0
-            ORDER BY ts DESC, id DESC
-            LIMIT 1;
+            # DuckDB 1.1.x-compatible scalar extraction (no json_extract_scalar)
+            score_expr = f"CAST(json_extract(metrics, '$.{metric}') AS DOUBLE)"
+
+            if min is not None:
+                clauses.append(score_expr + " >= ?")
+                params.append(float(min))
+            if max is not None:
+                clauses.append(score_expr + " <= ?")
+                params.append(float(max))
+            if tag:
+                clauses.append("position(? in tags) > 0")
+                params.append(tag)
+
+            where_sql = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+            sql = f"""
+                SELECT id, ts, config_hash, metrics, tags, {score_expr} AS score
+                FROM alphas
+                {where_sql}
+                ORDER BY score DESC NULLS LAST, ts DESC, id DESC
+                LIMIT ?
             """
-            rows = con.execute(q, [tag]).fetchall()
-        else:
-            q = """
-            SELECT id, ts, config_hash, metrics, tags
-            FROM alphas
-            ORDER BY ts DESC, id DESC
-            LIMIT 1;
-            """
-            rows = con.execute(q).fetchall()
-        return rows[0] if rows else None
-    finally:
-        con.close()
-
-
-# bind onto the class
-try:
-    AlphaRegistry.get_latest = _alpha_get_latest
-except NameError:
-    pass
+            params.append(int(limit))
+            return con.execute(sql, params).fetchall()
+        finally:
+            con.close()
