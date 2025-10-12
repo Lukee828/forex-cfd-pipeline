@@ -38,3 +38,16 @@ def test_list_recent_and_tags(tmp_path: Path):
     assert len(recent_fx) == 2
     ids = {row[0] for row in recent_fx}
     assert ids == {1, 3}
+
+
+def test_get_latest(tmp_path):
+    db = tmp_path / "registry.duckdb"
+    reg = AlphaRegistry(db).init()
+    reg.register("A", {"sharpe": 1.0}, ["fx"])
+    reg.register("B", {"sharpe": 1.1}, ["equity"])
+    reg.register("C", {"sharpe": 0.9}, ["fx"])
+    row_all = reg.get_latest()
+    row_fx = reg.get_latest("fx")
+    # row columns: (id, ts, config_hash, metrics, tags)
+    assert row_all[2] == "C"
+    assert row_fx[2] == "C"

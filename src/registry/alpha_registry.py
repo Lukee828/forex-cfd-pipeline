@@ -128,3 +128,42 @@ class AlphaRegistry:
         finally:
             con.close()
         return list(rows)
+
+
+# --- extension: get_latest(tag: str | None = None) -----------------------------------
+def _alpha_get_latest(self, tag: str | None = None):
+    """
+    Return newest row (id, ts, config_hash, metrics, tags). If tag provided,
+    filter by substring match inside 'tags' (comma-separated string).
+    """
+    import duckdb
+
+    con = duckdb.connect(str(self.db_path))
+    try:
+        if tag:
+            q = """
+            SELECT id, ts, config_hash, metrics, tags
+            FROM alphas
+            WHERE position(? in tags) > 0
+            ORDER BY ts DESC, id DESC
+            LIMIT 1;
+            """
+            rows = con.execute(q, [tag]).fetchall()
+        else:
+            q = """
+            SELECT id, ts, config_hash, metrics, tags
+            FROM alphas
+            ORDER BY ts DESC, id DESC
+            LIMIT 1;
+            """
+            rows = con.execute(q).fetchall()
+        return rows[0] if rows else None
+    finally:
+        con.close()
+
+
+# bind onto the class
+try:
+    AlphaRegistry.get_latest = _alpha_get_latest
+except NameError:
+    pass
