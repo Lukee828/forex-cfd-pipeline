@@ -13,3 +13,6 @@
 
 # Stop silly conflict churn from the heartbeat file
 .meta/nf-ping.txt merge=ours eol=lf
+*.ps1 text eol=crlf
+"*.sh" text eol=lf
+"*.py" text eol=lf
