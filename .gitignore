@@ -109,3 +109,12 @@ build/
 dist/
 site/
 *.egg-info/
+
+# CLI smoke artifacts
+cli_*.csv
+cli_*.html
+*_smoke.duckdb
+# CLI smoke artifacts
+cli_*.csv
+cli_*.html
+*_smoke.duckdb
