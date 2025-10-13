@@ -101,3 +101,11 @@ artifacts/**
 !artifacts/.gitkeep
 summary_*.html
 best_*.csv
+
+# mkdocs
+site/
+# build artifacts
+build/
+dist/
+site/
+*.egg-info/

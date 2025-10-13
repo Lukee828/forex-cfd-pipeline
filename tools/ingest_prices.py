@@ -22,9 +22,7 @@ def main() -> None:
     ap.add_argument("--symbol", required=True, help="Instrument symbol, e.g. EURUSD")
     ap.add_argument("--csv", help="Path to CSV for CsvPriceSource")
     ap.add_argument("--yahoo", help="Ticker to fetch via YahooPriceSource")
-    ap.add_argument(
-        "--db", default=str(Path("runs/fs_ingest/fs.db")), help="SQLite DB path"
-    )
+    ap.add_argument("--db", default=str(Path("runs/fs_ingest/fs.db")), help="SQLite DB path")
     ap.add_argument("--version", default=None, help="Provenance version label")
     args = ap.parse_args()
 
@@ -36,10 +34,7 @@ def main() -> None:
         src = CsvPriceSource(args.csv)
         df = src.fetch(args.yahoo)
         print(f"Loaded {len(df)} rows from CSV: {args.csv}")
-        version = (
-            args.version
-            or f'auto-{datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")}'
-        )
+        version = args.version or f'auto-{datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")}'
         pid = store.record_provenance(args.symbol, "prices", f"csv:{args.csv}", version)
         n = store.upsert_prices(args.symbol, df)
         print(f"Upserted {n} rows to FeatureStore; provenance id={pid}")
@@ -50,13 +45,8 @@ def main() -> None:
         src = YahooPriceSource()
         df = src.fetch(args.yahoo)
         print(f"Fetched {len(df)} rows from Yahoo for {args.symbol}")
-        version = (
-            args.version
-            or f'auto-{datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")}'
-        )
-        pid = store.record_provenance(
-            args.symbol, "prices", f"yahoo:{args.symbol}", version
-        )
+        version = args.version or f'auto-{datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")}'
+        pid = store.record_provenance(args.symbol, "prices", f"yahoo:{args.symbol}", version)
         n = store.upsert_prices(args.symbol, df)
         print(f"Upserted {n} rows to FeatureStore; provenance id={pid}")
         return

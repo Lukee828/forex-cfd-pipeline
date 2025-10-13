@@ -8,9 +8,7 @@ from src.risk.time_stop import TimeStopConfig, is_time_stop
 # --- helpers ---------------------------------------------------------------
 
 
-def simple_spread_fn(
-    bid: float, ask: float, max_bps: float = 25.0
-) -> Tuple[bool, float]:
+def simple_spread_fn(bid: float, ask: float, max_bps: float = 25.0) -> Tuple[bool, float]:
     # bps on bid for FX-style quote
     bps = (ask - bid) / bid * 10_000.0
     return (bps <= max_bps, bps)

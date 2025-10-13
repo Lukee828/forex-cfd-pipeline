@@ -55,15 +55,9 @@ def load_one_summary(grid_dir: str, prefer_bps: bool = True) -> pd.DataFrame:
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--runs", default="runs", help="root runs directory")
-    ap.add_argument(
-        "--max-grids", type=int, default=12, help="scan most recent N grids"
-    )
-    ap.add_argument(
-        "--plot", action="store_true", help="write heatmap PNGs for latest grid"
-    )
-    ap.add_argument(
-        "--top", type=int, default=10, help="rows to show in quick console preview"
-    )
+    ap.add_argument("--max-grids", type=int, default=12, help="scan most recent N grids")
+    ap.add_argument("--plot", action="store_true", help="write heatmap PNGs for latest grid")
+    ap.add_argument("--top", type=int, default=10, help="rows to show in quick console preview")
     args = ap.parse_args()
 
     runs = os.path.abspath(args.runs)
@@ -101,9 +95,7 @@ def main():
 
         # Ensure ints
         if "Trades" in df:
-            df["Trades"] = (
-                pd.to_numeric(df["Trades"], errors="coerce").fillna(0).astype(int)
-            )
+            df["Trades"] = pd.to_numeric(df["Trades"], errors="coerce").fillna(0).astype(int)
 
         rows.append(df)
 
@@ -150,9 +142,9 @@ def main():
     cons["sharpe_range"] = cons["sharpe_max"] - cons["sharpe_min"]
     cons["robust_score"] = cons["sharpe_mean"] - cons["sharpe_std"].fillna(0.0)
     cons_csv = os.path.join(runs, "best_params_consensus.csv")
-    cons.sort_values(
-        ["robust_score", "sharpe_mean", "calmar_mean"], ascending=False
-    ).to_csv(cons_csv, index=False)
+    cons.sort_values(["robust_score", "sharpe_mean", "calmar_mean"], ascending=False).to_csv(
+        cons_csv, index=False
+    )
     print("Wrote:", cons_csv)
 
     # ---- Latest grid: export heatmap CSVs (Sharpe & Calmar)
@@ -196,9 +188,7 @@ def main():
                 print("Plot skipped (matplotlib not available):", ex)
     # ---- Quick console preview
     top = (
-        cons.sort_values(
-            ["robust_score", "sharpe_mean", "calmar_mean"], ascending=False
-        )
+        cons.sort_values(["robust_score", "sharpe_mean", "calmar_mean"], ascending=False)
         .head(args.top if args.top else 10)
         .loc[
             :,

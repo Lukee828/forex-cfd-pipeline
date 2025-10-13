@@ -1,0 +1,17 @@
+site_name: Alpha Factory
+repo_url: https://github.com/Lukee828/forex-cfd-pipeline
+theme:
+  name: material
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - content.code.copy
+nav:
+  - Home: index.md
+  - CLI: CLI.md
+plugins:
+  - search
+markdown_extensions:
+  - admonition
+  - toc:
+      permalink: true

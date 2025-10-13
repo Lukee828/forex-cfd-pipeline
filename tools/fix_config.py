@@ -33,9 +33,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cfg", default="config/production.yaml")
     ap.add_argument("--symbols", help="core symbols (comma/space separated)")
-    ap.add_argument(
-        "--satellite", help="satellite symbols (comma/space separated); default empty"
-    )
+    ap.add_argument("--satellite", help="satellite symbols (comma/space separated); default empty")
     args = ap.parse_args()
 
     cfg_path = Path(args.cfg)

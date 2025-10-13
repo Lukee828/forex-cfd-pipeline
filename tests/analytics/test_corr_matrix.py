@@ -26,9 +26,7 @@ def test_drop_redundant_pairs_basic():
     # one of (a,b) is dropped, c remains
     assert set(reduced.columns) in ({"a", "c"}, {"b", "c"})
     # report reflects action
-    assert report.dropped_pairs and any(
-        {"a", "b"} == set(p[:2]) for p in report.dropped_pairs
-    )
+    assert report.dropped_pairs and any({"a", "b"} == set(p[:2]) for p in report.dropped_pairs)
 
 
 def test_per_regime_corr_shapes():

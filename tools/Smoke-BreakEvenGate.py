@@ -15,27 +15,21 @@ def approx(a: float, b: float, tol: float = 0.05) -> bool:
 def main() -> int:
     # CASE1: LONG, moved ~+16.667 bps -> arm when arm_bps=10
     entry1, px1, side1 = 1.2000, 1.2020, "long"
-    arm1, bps1 = should_arm_break_even(
-        entry1, px1, side1, BreakEvenGateConfig(arm_bps=10.0)
-    )
+    arm1, bps1 = should_arm_break_even(entry1, px1, side1, BreakEvenGateConfig(arm_bps=10.0))
     print("CASE1 arm:", arm1, "bps:", round(bps1, 3))
     # (1.2020-1.2000)/1.2000 * 10_000 = 16.666...
     assert arm1 and approx(bps1, 16.666, 0.01)
 
     # CASE2: SHORT, moved ~+23.077 bps in favor, but threshold 25 -> don't arm
     entry2, px2, side2 = 1.3000, 1.2970, "short"
-    arm2, bps2 = should_arm_break_even(
-        entry2, px2, side2, BreakEvenGateConfig(arm_bps=25.0)
-    )
+    arm2, bps2 = should_arm_break_even(entry2, px2, side2, BreakEvenGateConfig(arm_bps=25.0))
     print("CASE2 arm:", arm2, "bps:", round(bps2, 3))
     # For short: favor_bps = 10_000 * (entry - current)/entry = ~23.077
     assert (not arm2) and approx(bps2, 23.077, 0.02)
 
     # CASE3: exactly at threshold -> arm True
     entry3, px3, side3 = 1.0000, 1.0010, "long"  # +10 bps
-    arm3, bps3 = should_arm_break_even(
-        entry3, px3, side3, BreakEvenGateConfig(arm_bps=10.0)
-    )
+    arm3, bps3 = should_arm_break_even(entry3, px3, side3, BreakEvenGateConfig(arm_bps=10.0))
     print("CASE3 arm:", arm3, "bps:", round(bps3, 3))
     assert approx(bps3, 10.0, 0.001)
 

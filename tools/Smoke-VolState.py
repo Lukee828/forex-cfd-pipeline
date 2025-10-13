@@ -10,9 +10,7 @@ rng = np.random.default_rng(42)
 
 # build a deterministic 300-day series with 3 regimes
 n = 300
-dates = pd.date_range(
-    datetime.now(timezone.utc) - timedelta(days=n - 1), periods=n, freq="D"
-)
+dates = pd.date_range(datetime.now(timezone.utc) - timedelta(days=n - 1), periods=n, freq="D")
 seg = [100.0]
 for i in range(1, 100):
     seg.append(seg[-1] * (1 + 0.001 * rng.standard_normal()))
@@ -30,9 +28,7 @@ first_high = (reg.iloc[:100] == "HIGH").sum()
 last_high = (reg.iloc[-100:] == "HIGH").sum()
 
 print("first_high:", first_high, "last_high:", last_high)
-assert (
-    last_high > first_high
-), "Expected more HIGH regimes in the high-vol tail segment."
+assert last_high > first_high, "Expected more HIGH regimes in the high-vol tail segment."
 
 # also ensure we can use the convenience function without error
 reg2 = infer_vol_regime(close, window=20)

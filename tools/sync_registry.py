@@ -33,9 +33,7 @@ def sync_registry(db_path: Path, verbose=False):
         impl = type(fac).__name__
         params = getattr(fac, "__dict__", {})
         # Filter to keep it light
-        clean = {
-            k: v for k, v in params.items() if isinstance(v, (int, float, str, bool))
-        }
+        clean = {k: v for k, v in params.items() if isinstance(v, (int, float, str, bool))}
         blob = {"impl": impl, **clean}
         cur.execute(
             """INSERT INTO factors(name, impl, params, params_json, created_at, updated_at)

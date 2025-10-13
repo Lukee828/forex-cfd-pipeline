@@ -49,7 +49,5 @@ def test_upsert_and_query_roundtrip(tmp_path):
     wide = fs.pivot_wide("EURUSD")
     assert list(wide.columns) == ["ts", "bb_width", "ma_slope"]
     assert pd.notna(
-        wide.loc[
-            wide["ts"] == pd.Timestamp("2024-01-01 01:00:00+0000", tz="UTC"), "ma_slope"
-        ]
+        wide.loc[wide["ts"] == pd.Timestamp("2024-01-01 01:00:00+0000", tz="UTC"), "ma_slope"]
     ).any()

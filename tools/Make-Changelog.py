@@ -58,12 +58,10 @@ def main():
     # Top consensus section
     if os.path.isfile(cons_csv):
         df = pd.read_csv(cons_csv)
-        df = coerce_numeric(
-            df, ["sharpe_mean", "sharpe_std", "sharpe_range", "calmar_mean"]
+        df = coerce_numeric(df, ["sharpe_mean", "sharpe_std", "sharpe_range", "calmar_mean"])
+        top = df.sort_values(["robust_score", "sharpe_mean", "calmar_mean"], ascending=False).head(
+            args.max_top
         )
-        top = df.sort_values(
-            ["robust_score", "sharpe_mean", "calmar_mean"], ascending=False
-        ).head(args.max_top)
         parts.append("## Top consensus (robust across bps & grids)\n")
         parts.append("| fast | slow | robust | Sharpeμ | Sharpeσ | Calmarμ | obs |\n")
         parts.append("|-----:|-----:|------:|--------:|--------:|--------:|----:|\n")

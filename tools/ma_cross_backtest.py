@@ -52,11 +52,7 @@ def annualize(series, periods_per_year):
 def run_ma_cross(closes, fast, slow, start=None, end=None):
     if start or end:
         closes = closes.loc[slice(pd.to_datetime(start), pd.to_datetime(end))]
-    rets = (
-        closes.pct_change(fill_method=None)
-        .replace([np.inf, -np.inf], np.nan)
-        .dropna(how="all")
-    )
+    rets = closes.pct_change(fill_method=None).replace([np.inf, -np.inf], np.nan).dropna(how="all")
     # Signals per symbol: +1 long if fast>slow, -1 short if fast<slow, 0 otherwise
     fast_ma = closes.rolling(fast, min_periods=fast).mean()
     slow_ma = closes.rolling(slow, min_periods=slow).mean()
@@ -88,9 +84,7 @@ def main():
     ap.add_argument("--dry-run", action="store_true")
     args = ap.parse_args()
 
-    symbols = [
-        s.strip().upper() for s in (args.symbols.replace(",", " ").split()) if s.strip()
-    ]
+    symbols = [s.strip().upper() for s in (args.symbols.replace(",", " ").split()) if s.strip()]
     if args.fast >= args.slow:
         print(
             f"WARNING: fast({args.fast}) >= slow({args.slow}); typical MA cross uses fast<slow.",
@@ -134,9 +128,7 @@ def main():
     plt.savefig(outdir / "equity.png", dpi=120)
     plt.close()
 
-    print(
-        f"\nWrote: {outdir/'equity.png'}, equity.csv, portfolio_returns.csv, closes.csv"
-    )
+    print(f"\nWrote: {outdir/'equity.png'}, equity.csv, portfolio_returns.csv, closes.csv")
     return 0
 
 
