@@ -19,79 +19,10 @@ options:
 
 ## Subcommands
 
-### backup
-
-```text
-usage: alpha-registry backup [-h] [--retention RETENTION] [--dir DIR]
-
-options:
-  -h, --help            show this help message and exit
-  --retention RETENTION
-  --dir DIR
-```
-
-### best
-
-```text
-usage: alpha-registry best [-h] --metric METRIC [--top TOP]
-
-options:
-  -h, --help       show this help message and exit
-  --metric METRIC
-  --top TOP
-```
-
-### export
-
-```text
-usage: alpha-registry export [-h] --what {best,summary} --metric METRIC
-                             [--top TOP] [--format {csv,html}]
-                             [--theme {light,dark}] --out OUT
-
-options:
-  -h, --help            show this help message and exit
-  --what {best,summary}
-  --metric METRIC
-  --top TOP
-  --format {csv,html}
-  --theme {light,dark}
-  --out OUT
-```
-
 ### init
 
 ```text
 usage: alpha-registry init [-h]
-
-options:
-  -h, --help  show this help message and exit
-```
-
-### lineage
-
-```text
-usage: alpha-registry lineage [-h] --alpha ALPHA
-
-options:
-  -h, --help     show this help message and exit
-  --alpha ALPHA
-```
-
-### list
-
-```text
-usage: alpha-registry list [-h] [--limit LIMIT] [--tag TAG]
-
-options:
-  -h, --help     show this help message and exit
-  --limit LIMIT
-  --tag TAG
-```
-
-### refresh-runs
-
-```text
-usage: alpha-registry refresh-runs [-h]
 
 options:
   -h, --help  show this help message and exit
@@ -109,6 +40,58 @@ options:
   --tags TAGS
 ```
 
+### list
+
+```text
+usage: alpha-registry list [-h] [--limit LIMIT] [--tag TAG]
+
+options:
+  -h, --help     show this help message and exit
+  --limit LIMIT
+  --tag TAG
+```
+
+### best
+
+```text
+usage: alpha-registry best [-h] --metric METRIC [--top TOP]
+
+options:
+  -h, --help       show this help message and exit
+  --metric METRIC
+  --top TOP
+```
+
+### summary
+
+```text
+usage: alpha-registry summary [-h] --metric METRIC
+
+options:
+  -h, --help       show this help message and exit
+  --metric METRIC
+```
+
+### backup
+
+```text
+usage: alpha-registry backup [-h] [--retention RETENTION] [--dir DIR]
+
+options:
+  -h, --help            show this help message and exit
+  --retention RETENTION
+  --dir DIR
+```
+
+### refresh-runs
+
+```text
+usage: alpha-registry refresh-runs [-h]
+
+options:
+  -h, --help  show this help message and exit
+```
+
 ### search
 
 ```text
@@ -124,12 +107,29 @@ options:
   --limit LIMIT
 ```
 
-### summary
+### lineage
 
 ```text
-usage: alpha-registry summary [-h] --metric METRIC
+usage: alpha-registry lineage [-h] --alpha ALPHA
 
 options:
-  -h, --help       show this help message and exit
+  -h, --help     show this help message and exit
+  --alpha ALPHA
+```
+
+### export
+
+```text
+usage: alpha-registry export [-h] --what {best,summary} --metric METRIC
+                             [--top TOP] [--format {csv,html}]
+                             [--theme {light,dark}] --out OUT
+
+options:
+  -h, --help            show this help message and exit
+  --what {best,summary}
   --metric METRIC
+  --top TOP
+  --format {csv,html}
+  --theme {light,dark}
+  --out OUT
 ```
