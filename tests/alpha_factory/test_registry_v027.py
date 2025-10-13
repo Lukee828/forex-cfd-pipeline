@@ -42,11 +42,7 @@ def test_csv_import(tmp_path, tmp_path_factory):
     with p.open("w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=["config_hash", "metrics", "tags"])
         w.writeheader()
-        w.writerow(
-            {"config_hash": "h3", "metrics": json.dumps({"sharpe": 1.1}), "tags": "csv"}
-        )
-        w.writerow(
-            {"config_hash": "h4", "metrics": json.dumps({"sharpe": 2.5}), "tags": "csv"}
-        )
+        w.writerow({"config_hash": "h3", "metrics": json.dumps({"sharpe": 1.1}), "tags": "csv"})
+        w.writerow({"config_hash": "h4", "metrics": json.dumps({"sharpe": 2.5}), "tags": "csv"})
     n = import_csv_to_alphas(reg, str(p))
     assert n == 2

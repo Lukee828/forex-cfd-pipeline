@@ -11,9 +11,7 @@ def build_toy_prices(n: int = 10) -> pd.DataFrame:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(
-        description="FeatureStore demo (roundtrip prices + provenance)"
-    )
+    ap = argparse.ArgumentParser(description="FeatureStore demo (roundtrip prices + provenance)")
     ap.add_argument("--db", type=Path, default=Path("runs") / "fs_demo" / "fs.db")
     ap.add_argument("--symbol", default="EURUSD")
     ap.add_argument("--rows", type=int, default=10)

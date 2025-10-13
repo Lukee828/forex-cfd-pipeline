@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "alpha-factory"
+version = "0.3.0a1"
+description = "Alpha Factory: experiment registry & CLI (DuckDB-backed)"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Your Name" }]
+license = { text = "Proprietary" }
+dependencies = [
+  "pandas>=2.1",
+  "duckdb>=1.0",
+]
+
+[project.scripts]
+alpha-registry = "alpha_factory.registry_cli:main"
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=7.4",
+  "pre-commit>=3.7",
+  "ruff>=0.4",
+  "black>=24.3",
+  "mkdocs>=1.6",
+  "mkdocs-material>=9.5",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E", "F", "I", "UP"]
+ignore = []

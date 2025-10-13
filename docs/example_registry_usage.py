@@ -66,9 +66,7 @@ except Exception as e:
 # 4) Dashboard
 try:
     if "ranked" in locals() and hasattr(ranked, "empty") and not ranked.empty:
-        png = plot_alpha_performance(
-            ranked[["alpha_id", "value"]], title="Top by Sharpe"
-        )
+        png = plot_alpha_performance(ranked[["alpha_id", "value"]], title="Top by Sharpe")
         print("Saved dashboard to:", png)
 except Exception as e:
     print("dashboard failed:", e)
