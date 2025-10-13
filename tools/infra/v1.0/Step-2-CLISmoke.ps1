@@ -46,3 +46,24 @@ if (-not (Test-Path -LiteralPath $Html)) { throw "summary HTML not created: $Htm
 "== CSV head ==";  Get-Content -LiteralPath $Csv  | Select-Object -First 2
 "== HTML head =="; Get-Content -LiteralPath $Html | Select-Object -First 3
 Write-Host "[OK] CLI smoke passed" -ForegroundColor Green
+
+# --- Python self-heal guard (handles broken venvs that lack pyvenv.cfg) ---
+try {
+  & $PythonExe -c "import sys; print('OK', sys.executable)" | Out-Null
+} catch {
+  Write-Warning "Python ''$PythonExe'' looks broken. Trying fallbacks..."
+  $candidates = @(
+    (Join-Path $root ''.venv311\Scripts\python.exe''),
+    (Get-Command py      -ErrorAction SilentlyContinue | ForEach-Object { $_.Source }),
+    (Get-Command python  -ErrorAction SilentlyContinue | ForEach-Object { $_.Source })
+  ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -Unique
+  foreach ($cand in $candidates) {
+    try {
+      & $cand -c "print('OK')" | Out-Null
+      $PythonExe = $cand
+      Write-Host "Using Python: $PythonExe"
+      break
+    } catch { }
+  }
+}
+# --------------------------------------------------------------------------
