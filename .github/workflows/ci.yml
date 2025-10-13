@@ -44,7 +44,7 @@ jobs:
         shell: pwsh
         run: |
           $env:PYTHONPATH = (Resolve-Path ./src).Path
-          pwsh -File tools/infra/v1.0/Step-2-CLISmoke.ps1
+          pwsh -File tools/infra/v1.0/Step-2-CLISmoke.ps1 -PythonExe python
 
   docs-smoke:
     name: Docs Smoke (mkdocs build)
