@@ -28,3 +28,6 @@ logs/**
 # --- Notebooks ---
 *.ipynb_checkpoints/
 .precommit_cache/
+
+qa_artifacts/
+

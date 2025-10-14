@@ -1,1 +1,0 @@
-C:\Users\speed\Desktop\forex-standalone\.venv-qa\Scripts\python.exe: No module named black
