@@ -41,3 +41,7 @@
 - `ma_grid_20251004_181028\heatmap_calmar.csv`
 - `ma_grid_20251004_181028\heatmap_sharpe.png`
 - `ma_grid_20251004_181028\heatmap_calmar.png`
+## v0.4.1-infra-registry-final (Alpha Factory v1.0)
+- Add \zigzagob/alpha_factory/feature_store.py\ — DuckDB/SQLite Feature Store (versioned features, unique indexes in DuckDB).
+- Add \zigzagob/alpha_factory/alpha_registry.py\ — Alpha Registry (runs, metrics JSON, links to FeatureStore).
+- Tests: \	ests/store/test_feature_store.py\, \	ests/registry/test_alpha_registry_store_integration.py\ (2+2 green).
