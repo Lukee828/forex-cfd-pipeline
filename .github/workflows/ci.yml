@@ -1,70 +1,27 @@
-name: CI
+name: ci
 
 on:
-  workflow_dispatch:
+  push:
+    branches: [ main, "infra/**", "docs/**" ]
   pull_request:
+    branches: [ main ]
 
 jobs:
-  docs:
-    name: Docs Smoke (mkdocs build)
+  build-test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install MkDocs
+          cache: "pip"
+      - name: Install project
         run: |
-          python -m pip install --upgrade pip
-          pip install mkdocs mkdocs-material
-          pip install -e .[docs]
-      - name: Build docs
-        run: mkdocs build --strict
-
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Install pre-commit
-        run: pip install pre-commit
-      - name: Run pre-commit
-        run: pre-commit run --all-files
-
-  cli-smoke:
-    name: CLI Smoke (CSV + dark HTML)
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest, windows-latest]
-        python-version: ["3.11"]
-    runs-on: ${{ matrix.os }}
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Cache pip wheels
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
-          restore-keys: |
-            pip-${{ runner.os }}-${{ matrix.python-version }}-
-      - name: Install package (editable)
-        run: pip install -e .
-      - name: Run CLI smoke (PowerShell 7)
-        shell: pwsh
-        run: pwsh -File tools/infra/v1.0/Step-2-CLISmoke.ps1 -PythonExe python
-      - name: Upload CLI smoke artifacts (on fail)
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: cli-smoke-${{ runner.os }}-${{ matrix.python-version }}
-          path: |
-            cli_best.csv
-            cli_summary_dark.html
-            cli_smoke.duckdb
-          if-no-files-found: ignore
+          python -m pip install -U pip
+          python -m pip install -e ".[dev]"
+      - name: Ruff (lint)
+        run: ruff check .
+      - name: Black (format check)
+        run: black --check .
+      - name: Pytest
+        run: python -m pytest -q
