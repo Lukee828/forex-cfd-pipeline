@@ -1,32 +1,26 @@
 [build-system]
-requires = ["setuptools>=68", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
 
 [project]
-name = "alpha-factory"
-version = "0.3.0a1"
-description = "Alpha Factory: experiment registry & CLI (DuckDB-backed)"
+name = "zigzagob"
+version = "0.1.0"
+description = "Alpha Factory v1.0 infrastructure (features, registry, risk governor, allocator, scheduler, drift)."
 readme = "README.md"
 requires-python = ">=3.11"
-authors = [{ name = "Your Name" }]
+authors = [{ name = "Alpha Factory" }]
 license = { text = "Proprietary" }
 dependencies = [
-  "pandas>=2.1",
-  "duckdb>=1.0",
+  "duckdb>=1.0.0",
+  "pandas>=2.2",
+  "numpy>=1.26"
 ]
-
-[project.scripts]
-alpha-registry = "alpha_factory.registry_cli:main"
 
 [project.optional-dependencies]
 dev = [
-  "pytest>=7.4",
-  "pre-commit>=3.7",
-  "ruff>=0.4",
-  "black>=24.3",
-  "mkdocs>=1.6",
-  "mkdocs-material>=9.5",
-
+  "pytest>=8.2",
+  "black>=24.0",
+  "ruff>=0.6"
 ]
 
 [tool.black]
@@ -36,5 +30,10 @@ target-version = ["py311"]
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-select = ["E", "F", "I", "UP"]
-ignore = []
+select = ["E","F","I","UP"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-q"
+testpaths = ["tests"]
