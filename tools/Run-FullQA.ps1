@@ -1,0 +1,199 @@
+param(
+    [Parameter(Mandatory=$true)]
+    [ValidateSet(1,2,3,4,5)]
+    [int]$Day,
+
+    [switch]$RebuildVenv,
+    [switch]$SkipDocs,
+
+    [string]$Python = ".\.venv-qa\Scripts\python.exe",
+    [string]$BaselineTag = "v1.0.1"
+)
+$ErrorActionPreference = "Stop"
+$root = (Resolve-Path ".").Path
+$artRoot = Join-Path $root "qa_artifacts"
+$stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+$art = Join-Path $artRoot "Day$Day-$stamp"
+New-Item -ItemType Directory -Force -Path $art | Out-Null
+
+function Say($msg,[ConsoleColor]$c=[ConsoleColor]::Cyan){ $o = $Host.UI.RawUI; $old=$o.ForegroundColor; $o.ForegroundColor=$c; Write-Host $msg; $o.ForegroundColor=$old }
+function Run([string]$cmd, [string]$logName){
+  Say "▶ $cmd" DarkCyan
+  $sw=[Diagnostics.Stopwatch]::StartNew()
+  $log = Join-Path $art $logName
+  $psi = New-Object System.Diagnostics.ProcessStartInfo
+  $psi.FileName = "pwsh"
+  $psi.Arguments = "-NoLogo -NoProfile -Command `"& { $cmd }`""
+  $psi.RedirectStandardOutput = $true
+  $psi.RedirectStandardError = $true
+  $psi.UseShellExecute = $false
+  $p = [Diagnostics.Process]::Start($psi)
+  $p.WaitForExit()
+  $sw.Stop()
+  $out = $p.StandardOutput.ReadToEnd()
+  $err = $p.StandardError.ReadToEnd()
+  $rc = $p.ExitCode
+  Set-Content -NoNewline -Encoding utf8 $log ($out + $err)
+  if($rc -ne 0){ Say "✗ Exit $rc — see $log" Red; throw "Step failed: $cmd" }
+  Say ("✓ {0} in {1:n1}s  → {2}" -f $logName, $sw.Elapsed.TotalSeconds, $log) Green
+  return $out
+}
+
+# 0) Assert we’re on the baseline (informational)
+try {
+  $rev = (git rev-parse --short HEAD).Trim()
+  $ann = (git describe --tags --always --dirty).Trim()
+  Say "Git: $ann (HEAD=$rev); baseline=$BaselineTag" DarkGray
+} catch {}
+
+# 1) Venv (re)build
+if($RebuildVenv -or -not (Test-Path $Python)){
+  Say "Rebuilding QA venv → .venv-qa" Yellow
+  if(Test-Path ".venv-qa"){ Remove-Item ".venv-qa" -Recurse -Force -ErrorAction SilentlyContinue }
+  Run "python -m venv .venv-qa" "venv.txt"
+  Run "$Python -m pip install -U pip wheel" "pip-up.txt"
+  # install dev + plots extras for dashboards
+  Run "$Python -m pip install -e '.[dev,plots]'" "pip-install.txt"
+} else {
+  Say "Using existing QA venv: $Python" DarkGray
+}
+
+# 2) Common preflight: lint quick pass (no fail on lint — report only)
+try {
+  Run "$Python -m ruff --version" "ruff-version.txt" | Out-Null
+  Run "$Python -m ruff check ." "ruff.txt"
+} catch { Say "Ruff step warned: $($_.Exception.Message)" DarkYellow }
+
+try {
+  Run "$Python -m black --version" "black-version.txt" | Out-Null
+  Run "$Python -m black --check ." "black.txt"
+} catch { Say "Black step warned: $($_.Exception.Message)" DarkYellow }
+
+# 3) Define day plans (paths/markers/args)
+# NOTE: We stay path-based to avoid depending on custom markers.
+$PyTest = "$Python -m pytest"
+
+$Plans = @{
+  "1" = @{
+    name="Day 1 — Smoke & Unit Core";
+    tests=@(
+      "tests/datafeed",
+      "tests/factors",
+      "tests/feature",
+      "tests/registry",
+      "tests/risk",
+      "tests/structure"
+    );
+    extra=""; cov="cov-day1";
+  };
+  "2" = @{
+    name="Day 2 — Integration & Dashboards";
+    tests=@(
+      "tests/alpha_factory",
+      "tests/analytics"
+    );
+    extra=""; cov="cov-day2";
+  };
+  "3" = @{
+    name="Day 3 — Repro & Stability";
+    tests=@(
+      "tests",             # whole tree once
+      "tests"              # and again to catch flakiness
+    );
+    extra=""; cov="cov-day3";
+  };
+  "4" = @{
+    name="Day 4 — Packaging & Installability";
+    tests=@(
+      "tests/analytics",   # plots extra validated already; keep light suite
+      "tests/feature",
+      "tests/registry"
+    );
+    extra="--maxfail=1"; cov="cov-day4";
+  };
+  "5" = @{
+    name="Day 5 — Full Regression & Coverage";
+    tests=@(
+      "tests"
+    );
+    extra=""; cov="cov-day5";
+  };
+}
+
+function Invoke-PytestPlan($planKey){
+  $plan = $Plans[$planKey]
+  Say $plan.name Magenta
+  $junit = Join-Path $art "pytest-$planKey.xml"
+  $covdir = Join-Path $art $plan.cov
+  New-Item -ItemType Directory -Force -Path $covdir | Out-Null
+
+  foreach($t in $plan.tests){
+    $cmd = "$PyTest --junitxml=`"$junit`" --cov=zigzagob --cov-report xml:`"$covdir\coverage.xml`" --cov-report html:`"$covdir\html`" $plan.extra $t"
+    Run $cmd ("pytest-$planKey-" + ($t -replace '[\\/:\s]','_') + ".log")
+  }
+}
+
+# 4) Docs build sanity (best-effort)
+function Try-Docs {
+  try {
+    if(Test-Path "mkdocs.yml"){
+      Say "if (-not $SkipDocs) {
+  Write-Host "▶ Installing MkDocs dependencies" -ForegroundColor Cyan
+  .\.venv-qa\Scripts\python.exe -m pip install -U mkdocs mkdocs-material pymdown-extensions<11 markdown<4
+  Write-Host "▶ Building docs (mkdocs build)" -ForegroundColor Cyan
+  .\.venv-qa\Scripts\python.exe -m mkdocs build --strict
+  Write-Host "✓ Docs built successfully" -ForegroundColor Green
+} else {
+  Write-Host "⚠ Docs step skipped due to -SkipDocs." -ForegroundColor Yellow
+}" "pip-docs.txt"
+      Run "pwsh -NoLogo -NoProfile -Command `"& { mkdocs build -q }`"" "mkdocs.txt"
+    }
+  } catch { Say "Docs build warned: $($_.Exception.Message)" DarkYellow }
+}
+
+# 5) Packaging sanity (editable is already installed; also build sdist/wheel)
+function Try-Packaging {
+  try {
+    Say "Build sdist/wheel (hatchling)" DarkCyan
+    Run "$Python -m pip install build" "pip-build.txt"
+    Run "$Python -m build -o `"$art\dist`"" "build.txt"
+  } catch { Say "Packaging warned: $($_.Exception.Message)" DarkYellow }
+}
+
+# 6) Orchestration
+$daysToRun = @()
+if($Day -eq "all"){ $daysToRun = @("1","2","3","4","5") } else { $daysToRun = @($Day) }
+
+foreach($d in $daysToRun){
+  switch($d){
+    "1" { Invoke-PytestPlan "1" }
+    "2" { Invoke-PytestPlan "2" }
+    "3" { Invoke-PytestPlan "3" }
+    "4" { Try-Packaging; Invoke-PytestPlan "4"; Try-Docs }
+    "5" { Invoke-PytestPlan "5" }
+  }
+}
+
+# 7) Produce a minimal summary
+$summary = @()
+$summary += "# QA Summary — Day $Day ($(Get-Date -Format u))"
+$summary += ""
+$summary += ("• Baseline: {0}" -f $BaselineTag)
+$summary += ("• Artifacts: {0}" -f $art)
+$covs = Get-ChildItem $art -Directory -Filter "cov-*" -ErrorAction SilentlyContinue
+if($covs){
+  foreach($c in $covs){
+    $covXml = Join-Path $c.FullName "coverage.xml"
+    if(Test-Path $covXml){
+      try {
+        [xml]$x = Get-Content $covXml
+        $rate = [double]$x.coverage."line-rate" * 100
+        $summary += ("• {0}: line-rate ~ {1:n1}%%" -f $c.Name, $rate)
+      } catch {}
+    }
+  }
+}
+$sumPath = Join-Path $art "SUMMARY.md"
+Set-Content -Encoding utf8 $sumPath ($summary -join "`n")
+Say ("Summary → {0}" -f $sumPath) Green
+# --- PATCH END ---
