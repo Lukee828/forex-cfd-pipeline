@@ -7,7 +7,7 @@ def test_csv_roundtrip(tmp_path: Path):
     csv = tmp_path / "eurusd.csv"
     df = pd.DataFrame(
         {
-            "timestamp": pd.date_range("2024-01-01", periods=5, freq="H", tz="UTC"),
+            "timestamp": pd.date_range("2024-01-01", periods=5, freq="h", tz="UTC"),
             "close": [1.0, 1.1, 1.2, 1.3, 1.4],
         }
     )
