@@ -2,8 +2,6 @@ name: CI
 
 on:
   workflow_dispatch:
-  push:
-    branches: [ main ]
   pull_request:
 
 jobs:
@@ -13,14 +11,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
-        with: { python-version: '3.11' }
+        with:
+          python-version: "3.11"
       - name: Install MkDocs
         run: |
           python -m pip install --upgrade pip
           pip install mkdocs mkdocs-material
+          pip install -e .[docs]
       - name: Build docs
         run: mkdocs build --strict
-lint:
+
+  lint:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,24 +32,6 @@ lint:
         run: pip install pre-commit
       - name: Run pre-commit
         run: pre-commit run --all-files
-
-  docs-smoke:
-    name: Docs Smoke (mkdocs build)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Install MkDocs
-      run: |
-        python -m pip install --upgrade pip
-        pip install mkdocs mkdocs-material
-        pip install -e .[docs]
-    - name: Build docs
-        run: |
-          pip install -e .[docs]
-          mkdocs build --strict
 
   cli-smoke:
     name: CLI Smoke (CSV + dark HTML)
@@ -63,8 +46,6 @@ lint:
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
-
-      # ---------- pip cache ----------
       - name: Cache pip wheels
         uses: actions/cache@v4
         with:
@@ -72,16 +53,11 @@ lint:
           key: pip-${{ runner.os }}-${{ matrix.python-version }}-${{ hashFiles('pyproject.toml') }}
           restore-keys: |
             pip-${{ runner.os }}-${{ matrix.python-version }}-
-      # --------------------------------
-
       - name: Install package (editable)
         run: pip install -e .
-
       - name: Run CLI smoke (PowerShell 7)
         shell: pwsh
         run: pwsh -File tools/infra/v1.0/Step-2-CLISmoke.ps1 -PythonExe python
-
-      # ---------- artifact upload ----------
       - name: Upload CLI smoke artifacts (on fail)
         if: failure()
         uses: actions/upload-artifact@v4
@@ -92,4 +68,3 @@ lint:
             cli_summary_dark.html
             cli_smoke.duckdb
           if-no-files-found: ignore
-      # -------------------------------------
