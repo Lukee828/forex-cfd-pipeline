@@ -1,6 +1,12 @@
 name: pr-ci
 on:
   pull_request:
+      paths:
+        - alpha_factory/**
+        - tests/**
+        - tools/**
+        - configs/**
+        - mt5/**
     branches: [ main ]
 jobs:
   pr:

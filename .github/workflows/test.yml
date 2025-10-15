@@ -1,6 +1,12 @@
 name: Tests (pytest)
 on:
   pull_request:
+      paths:
+        - alpha_factory/**
+        - tests/**
+        - tools/**
+        - configs/**
+        - mt5/**
   workflow_dispatch:
 
 
