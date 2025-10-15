@@ -1,3 +1,5 @@
+env:
+  AF_SKIP_MT5: '1'
 name: Tests (pytest)
 
 on:
@@ -28,3 +30,4 @@ jobs:
 
       - name: Run pytest
         run: pytest -q --maxfail=1 --disable-warnings
+

@@ -1,3 +1,5 @@
+env:
+  AF_SKIP_MT5: '1'
 name: Check for push or pull_request_target triggers
 on:
   pull_request:
@@ -31,3 +33,4 @@ jobs:
             done
           done
           exit $bad
+

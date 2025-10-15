@@ -1,3 +1,5 @@
+env:
+  AF_SKIP_MT5: '1'
 name: Lint (Ruff + Black)
 on:
   pull_request:
@@ -28,3 +30,4 @@ jobs:
         run: ruff check .
       - name: Black (format check)
         run: black --check .
+
