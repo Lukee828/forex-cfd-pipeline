@@ -1,25 +1,40 @@
-import os, json
+import os
+import json
 from typing import List, Optional
 import numpy as np
 import pandas as pd
 import duckdb
 from alpha_factory.datafeeds.mt5_feed import MT5
 
+
 def rsi(series: pd.Series, period: int = 14) -> pd.Series:
     delta = series.diff()
     gain = delta.clip(lower=0)
     loss = -delta.clip(upper=0)
-    avg_gain = gain.ewm(alpha=1/period, adjust=False).mean()
-    avg_loss = loss.ewm(alpha=1/period, adjust=False).mean()
+    avg_gain = gain.ewm(alpha=1 / period, adjust=False).mean()
+    avg_loss = loss.ewm(alpha=1 / period, adjust=False).mean()
     rs = avg_gain / avg_loss.replace(0, np.nan)
     return 100 - (100 / (1 + rs))
 
+
 def build_features(df: pd.DataFrame, period_rsi: int = 14) -> pd.DataFrame:
     if df is None or df.empty:
-        return pd.DataFrame(columns=[
-            "open","high","low","close","tick_volume","spread","real_volume",
-            "ret","ema20","ema50","rsi14","vol20"
-        ])
+        return pd.DataFrame(
+            columns=[
+                "open",
+                "high",
+                "low",
+                "close",
+                "tick_volume",
+                "spread",
+                "real_volume",
+                "ret",
+                "ema20",
+                "ema50",
+                "rsi14",
+                "vol20",
+            ]
+        )
     out = df.copy()
     out["ret"] = np.log(out["close"]).diff()
     out["ema20"] = out["close"].ewm(span=20, adjust=False).mean()
@@ -28,18 +43,35 @@ def build_features(df: pd.DataFrame, period_rsi: int = 14) -> pd.DataFrame:
     out["vol20"] = out["ret"].rolling(20).std()
     return out
 
+
 def write_parquet(df: pd.DataFrame, path: str) -> str:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     df.to_parquet(path, index=True)
     return os.path.abspath(path)
 
+
 def write_duckdb(df: pd.DataFrame, db_path: str, table: str = "features") -> str:
     os.makedirs(os.path.dirname(db_path), exist_ok=True)
     con = duckdb.connect(db_path)
     try:
-        dfw = df.reset_index().rename(columns={"time":"ts"})
-        cols = ["ts","symbol","timeframe","open","high","low","close",
-                "tick_volume","spread","real_volume","ret","ema20","ema50","rsi14","vol20"]
+        dfw = df.reset_index().rename(columns={"time": "ts"})
+        cols = [
+            "ts",
+            "symbol",
+            "timeframe",
+            "open",
+            "high",
+            "low",
+            "close",
+            "tick_volume",
+            "spread",
+            "real_volume",
+            "ret",
+            "ema20",
+            "ema50",
+            "rsi14",
+            "vol20",
+        ]
         for c in cols:
             if c not in dfw.columns:
                 dfw[c] = np.nan
@@ -62,9 +94,16 @@ def write_duckdb(df: pd.DataFrame, db_path: str, table: str = "features") -> str
         con.close()
     return os.path.abspath(db_path)
 
-def run(symbols: List[str], timeframe: str, count: Optional[int],
-        dt_from: Optional[str], dt_to: Optional[str],
-        out_parquet_dir: Optional[str], out_duckdb: Optional[str]) -> dict:
+
+def run(
+    symbols: List[str],
+    timeframe: str,
+    count: Optional[int],
+    dt_from: Optional[str],
+    dt_to: Optional[str],
+    out_parquet_dir: Optional[str],
+    out_duckdb: Optional[str],
+) -> dict:
     api = MT5()
     results = {}
     for sym in symbols:
@@ -81,16 +120,35 @@ def run(symbols: List[str], timeframe: str, count: Optional[int],
             wrote["parquet"] = write_parquet(feat, p)
         if out_duckdb:
             wrote["duckdb"] = write_duckdb(
-                feat[["open","high","low","close","tick_volume","spread","real_volume","ret","ema20","ema50","rsi14","vol20","symbol","timeframe"]],
-                out_duckdb
+                feat[
+                    [
+                        "open",
+                        "high",
+                        "low",
+                        "close",
+                        "tick_volume",
+                        "spread",
+                        "real_volume",
+                        "ret",
+                        "ema20",
+                        "ema50",
+                        "rsi14",
+                        "vol20",
+                        "symbol",
+                        "timeframe",
+                    ]
+                ],
+                out_duckdb,
             )
         results[sym] = {"rows": int(len(feat)), "outputs": wrote}
     return results
 
+
 def _cli():
     import argparse
+
     ap = argparse.ArgumentParser()
-    ap.add_argument("--symbols", nargs="+", default=["XAUUSD","US30","DE40"])
+    ap.add_argument("--symbols", nargs="+", default=["XAUUSD", "US30", "DE40"])
     ap.add_argument("--timeframe", default="M5")
     grp = ap.add_mutually_exclusive_group(required=True)
     grp.add_argument("--count", type=int, help="last N bars")
@@ -103,6 +161,7 @@ def _cli():
         ap.error("--from_dt requires --to_dt")
     res = run(a.symbols, a.timeframe, a.count, a.from_dt, a.to_dt, a.out_parquet_dir, a.out_duckdb)
     print(json.dumps(res, ensure_ascii=False))
+
 
 if __name__ == "__main__":
     _cli()

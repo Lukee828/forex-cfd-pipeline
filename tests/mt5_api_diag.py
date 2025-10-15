@@ -1,7 +1,12 @@
-import sys, time
+import sys
 import MetaTrader5 as mt5
 
-CANDIDATES = ["C:\\Program Files\\MetaTrader 5 IC Markets EU\\terminal64.exe", "C:\\Program Files\\AMP Global (USA) MT5 Exchange-Traded Futures Only\\terminal64.exe", "C:\\Program Files\\FTMO MetaTrader 5\\terminal64.exe"]
+CANDIDATES = [
+    "C:\\Program Files\\MetaTrader 5 IC Markets EU\\terminal64.exe",
+    "C:\\Program Files\\AMP Global (USA) MT5 Exchange-Traded Futures Only\\terminal64.exe",
+    "C:\\Program Files\\FTMO MetaTrader 5\\terminal64.exe",
+]
+
 
 def try_init(path=None):
     if path:
@@ -11,6 +16,7 @@ def try_init(path=None):
     if not ok:
         return False, mt5.last_error()
     return True, None
+
 
 def main():
     # 1) Try default attach to running terminal
@@ -38,6 +44,7 @@ def main():
     finally:
         mt5.shutdown()
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())
