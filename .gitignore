@@ -31,3 +31,8 @@ logs/**
 
 qa_artifacts/
 
+data/
+*/__pycache__/
+*.parquet
+*.duckdb
+*.db
