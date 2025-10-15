@@ -1,33 +1,21 @@
-env:
-  AF_SKIP_MT5: '1'
 name: Lint (Ruff + Black)
 on:
   pull_request:
-      paths:
-        - alpha_factory/**
-        - tests/**
-        - tools/**
-        - configs/**
-        - mt5/**
   workflow_dispatch:
-
-
+env:
+  AF_SKIP_MT5: '1'
 jobs:
   lint:
-    runs-on: windows-latest
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          lfs: true
       - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Install tooling
+        with: { python-version: '3.11' }
+      - name: Install linters
         run: |
           python -m pip install --upgrade pip
           pip install ruff black
-      - name: Ruff (lint)
+      - name: Ruff (check)
         run: ruff check .
-      - name: Black (format check)
+      - name: Black (check)
         run: black --check .
-
