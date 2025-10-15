@@ -1,6 +1,12 @@
 name: Check for push or pull_request_target triggers
 on:
   pull_request:
+      paths:
+        - alpha_factory/**
+        - tests/**
+        - tools/**
+        - configs/**
+        - mt5/**
   workflow_dispatch:
 
 jobs:
