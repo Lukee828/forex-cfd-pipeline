@@ -1,3 +1,5 @@
+# temporarily disabled (replaced by tests.yml + lint.yml)
+# 2025-10-15T21:21:20Z
 name: pr-ci (disabled)
 on:
   workflow_call:
@@ -7,3 +9,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: echo 'disabled'
+
