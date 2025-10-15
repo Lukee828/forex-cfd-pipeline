@@ -1,3 +1,5 @@
+env:
+  AF_SKIP_MT5: '1'
 name: pr-ci
 on:
   pull_request:
@@ -17,3 +19,4 @@ jobs:
         with: { python-version: '3.11' }
       - run: python -m pip install -U pip && pip install -r requirements.txt -c .github/constraints-ci.txt pytest
       - run: pytest -q
+
