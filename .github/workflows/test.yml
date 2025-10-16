@@ -1,3 +1,7 @@
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
 name: Tests (pytest)
 on:
   pull_request:
