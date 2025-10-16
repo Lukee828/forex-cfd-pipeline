@@ -9,9 +9,11 @@ from .registry import get_store, TABLES
 # Optional imports; we keep integration soft so local dev never breaks.
 try:
     from src.risk.spread_guard import SpreadGuardConfig, check_spread_ok  # type: ignore
-from ._compat_risk import new_spread_guard_config
 except Exception:  # pragma: no cover - optional
     SpreadGuardConfig = None  # type: ignore
+    check_spread_ok = None  # type: ignore
+
+from ._compat_risk import new_spread_guard_config    SpreadGuardConfig = None  # type: ignore
     check_spread_ok = None  # type: ignore
 
 try:

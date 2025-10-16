@@ -58,16 +58,16 @@ def clamp(v: float, lo: float, hi: float) -> float:
 @dataclass
 class RiskGovernorConfig:
     # Drawdown guard
-    dd_window: int = 100               # bars
-    max_drawdown: float = 0.15         # 15%
-    dd_floor_scale: float = 0.0        # position scale when DD guard trips
+    dd_window: int = 100  # bars
+    max_drawdown: float = 0.15  # 15%
+    dd_floor_scale: float = 0.0  # position scale when DD guard trips
 
     # Volatility throttle
-    vol_target_annual: float = 0.20    # 20% annualized target vol
+    vol_target_annual: float = 0.20  # 20% annualized target vol
     vol_min_scale: float = 0.0
     vol_max_scale: float = 1.0
     ewma_lambda: float = 0.94
-    vol_window: int = 60               # bars (daily returns recommended)
+    vol_window: int = 60  # bars (daily returns recommended)
 
     # Numerics
     eps: float = 1e-12
@@ -83,6 +83,7 @@ class RiskGovernor:
             scale, info = rg.update(equity_t, ret_t)
             # use `scale` to modulate gross exposure (0..1)
     """
+
     def __init__(self, cfg: Optional[RiskGovernorConfig] = None) -> None:
         self.cfg = cfg or RiskGovernorConfig()
         self._equity: Deque[float] = deque(maxlen=max(self.cfg.dd_window, 1))
@@ -91,12 +92,14 @@ class RiskGovernor:
     def _dd_scale(self) -> Tuple[float, dict]:
         cur_dd, max_dd = rolling_drawdown(self._equity, self.cfg.dd_window)
         tripped = max_dd >= (self.cfg.max_drawdown - self.cfg.eps)
-        scale = self.cfg.dd_floor_scale if tripped else None
-        return (self.cfg.dd_floor_scale if tripped else 1.0, {
-            "current_dd": cur_dd,
-            "max_dd": max_dd,
-            "dd_tripped": tripped,
-        })
+return (
+            self.cfg.dd_floor_scale if tripped else 1.0,
+            {
+                "current_dd": cur_dd,
+                "max_dd": max_dd,
+                "dd_tripped": tripped,
+            },
+        )
 
     def _vol_scale(self) -> Tuple[float, dict]:
         sig_daily = ewma_vol(self._rets, self.cfg.ewma_lambda)
