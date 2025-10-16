@@ -100,17 +100,18 @@ return (
                 "dd_tripped": tripped,
             },
         )
-
     def _vol_scale(self) -> Tuple[float, dict]:
         sig_daily = ewma_vol(self._rets, self.cfg.ewma_lambda)
         sig_ann = sig_daily * np.sqrt(self.cfg.trading_days)
-        if sig_ann <= self.cfg.eps:
-            # No volatility observed; allow max scale (no throttle)
-            return (self.cfg.vol_max_scale, {"vol_ann": 0.0, "vol_scale": self.cfg.vol_max_scale})
-        scale = self.cfg.vol_target_annual / sig_ann
-        scale = clamp(scale, self.cfg.vol_min_scale, self.cfg.vol_max_scale)
-        return (float(scale), {"vol_ann": float(sig_ann), "vol_scale": float(scale)})
+        if sig_ann <= 0:
+            return 1.0, {"sig_ann": float(sig_ann)}
 
+        target = self.cfg.vol_target
+        floor = self.cfg.vol_floor
+        ceil = self.cfg.vol_ceiling
+        raw = target / sig_ann
+        clamped = float(max(min(raw, ceil), floor))
+        return clamped, {"sig_ann": float(sig_ann), "raw": float(raw), "clamped": clamped}
     def update(self, equity_value: float, ret_value: float) -> Tuple[float, dict]:
         """Feed latest equity and single-period return; returns (position_scale, diagnostics)."""
         self._equity.append(float(equity_value))

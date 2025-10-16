@@ -1,6 +1,25 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from datetime import datetime, timezone
+from typing import Any, Dict, Optional
+
+# Optional risk deps (graceful downgrade)
+try:
+    from src.risk.spread_guard import SpreadGuardConfig, check_spread_ok  # type: ignore
+except Exception:  # pragma: no cover - optional
+    SpreadGuardConfig = None  # type: ignore
+    check_spread_ok = None  # type: ignore
+
+from ._compat_risk import new_spread_guard_config
+
+try:
+    from src.risk.vol_state import VolStateMachine, infer_vol_regime  # type: ignore
+except Exception:  # pragma: no cover - optional
+    VolStateMachine = None  # type: ignore
+    infer_vol_regime = None  # type: ignore
+from __future__ import annotations
+from dataclasses import dataclass
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional
 import pandas as pd
 
@@ -8,19 +27,12 @@ from .registry import get_store, TABLES
 
 # Optional imports; we keep integration soft so local dev never breaks.
 try:
-    from src.risk.spread_guard import SpreadGuardConfig, check_spread_ok  # type: ignore
 except Exception:  # pragma: no cover - optional
-    SpreadGuardConfig = None  # type: ignore
-    check_spread_ok = None  # type: ignore
 
 from ._compat_risk import new_spread_guard_config    SpreadGuardConfig = None  # type: ignore
-    check_spread_ok = None  # type: ignore
 
 try:
-    from src.risk.vol_state import VolStateMachine, infer_vol_regime  # type: ignore
 except Exception:  # pragma: no cover - optional
-    VolStateMachine = None  # type: ignore
-    infer_vol_regime = None  # type: ignore
 
 
 @dataclass
