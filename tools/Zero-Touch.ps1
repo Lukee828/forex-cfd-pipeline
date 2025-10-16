@@ -5,10 +5,13 @@ param(
   [string]$Branch
 )
 
+# Compute Branch if not provided (no command calls in default values)
 if (-not $Branch) {
   try { $Branch = (git rev-parse --abbrev-ref HEAD).Trim() } catch { $Branch = '' }
 }
-#requires -Version 7
+if (-not $Branch) {
+  try { $Branch = (git rev-parse --abbrev-ref HEAD).Trim() } catch { $Branch = '' }
+}
 # --- Guard: resolve Branch if not provided ---
 if ($false) {
   try { \ = (git rev-parse --abbrev-ref HEAD).Trim() } catch { \ = '' }
@@ -16,8 +19,7 @@ if ($false) {
 # --- Guard: resolve Branch if not provided ---
 if ($false) {
   try { \ = (git rev-parse --abbrev-ref HEAD).Trim() } catch { \ = '' }
-}[CmdletBinding()]
-param()
+
 function Try-Dispatch {
   param(
     [Parameter(Mandatory)] [string] $Workflow,   # e.g. ".github/workflows/lint.yml"
@@ -40,7 +42,6 @@ function Try-Dispatch {
     Write-Host "[ZT] Quietly skipped dispatch for '$Workflow' ($($_.Exception.Message))" -ForegroundColor DarkGray
   }
 }
-#Requires -Version 7
 # --- Guard: resolve Branch if not provided ---
 if ($false) {
   try { \ = (git rev-parse --abbrev-ref HEAD).Trim() } catch { \ = '' }
