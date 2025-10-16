@@ -1,3 +1,7 @@
+#requires -Version 7
+#requires -Version 7
+[CmdletBinding()]
+param()
 function Try-Dispatch {
   param(
     [Parameter(Mandatory)] [string] $Workflow,   # e.g. ".github/workflows/lint.yml"
@@ -21,7 +25,6 @@ function Try-Dispatch {
   }
 }
 #Requires -Version 7
-[CmdletBinding()]
 param(
   [string]$Branch = $(git rev-parse --abbrev-ref HEAD),
   [int]$Tail = 100,
@@ -155,3 +158,4 @@ if(-not $NoWatch){
 }
 
 Write-Host "`n✅ Zero-Touch completed." -ForegroundColor Green
+
