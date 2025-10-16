@@ -1,0 +1,46 @@
+name: Export Features (nightly)
+
+on:
+  schedule:
+    - cron: "15 2 * * *"   # 02:15 UTC nightly
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    env:
+      PYTHONPATH: "${{ github.workspace }}:${{ github.workspace }}/src"
+      FS_DB: "./fs.duckdb"
+      FS_PARQUET_DIR: "./artifacts/exports"
+      PAIRS: "EURUSD,GBPUSD,USDJPY"
+      SPREAD_BPS: "18.0"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run exporter
+        run: |
+          python -m src.infra.cli_export
+
+      - name: Upload Parquet artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: feature-exports-${{ github.run_id }}
+          path: artifacts/exports
+          if-no-files-found: warn
