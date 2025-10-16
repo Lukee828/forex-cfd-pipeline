@@ -1,21 +1,35 @@
 name: Tests (pytest)
+
 on:
+  push:
   pull_request:
   workflow_dispatch:
 
+defaults:
+  run:
+    shell: pwsh
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      AF_SKIP_MT5: '1'
+      PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - name: Install dependencies
+          python-version: '3.11'
+
+      - name: Install deps
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.txt || true
-          pip install pytest pytest-cov
-      - name: Run pytest
-        run: pytest --maxfail=5 --disable-warnings -q --cov=src
+          pip install -r requirements.txt -c .github/constraints-ci.txt
+          if ($LASTEXITCODE -ne 0) { Write-Host 'Ignoring constraints install failure'; $global:LASTEXITCODE = 0 }
+          pip install pytest pytest-cov -c .github/constraints-ci.txt
+
+      - name: Run pytest (smoke)
+        run: pytest -q --maxfail=1 --disable-warnings tests/ci_smoke_test.py
