@@ -1,3 +1,4 @@
-line-length = 140
-exclude = ["tools/_gen/*"]
-ignore = ["E701", "E702", "E722"]
+[tool.ruff]
+select = ["E","F","W","I","UP","B","PIE"]
+ignore = ["E501"]
+fix = true
