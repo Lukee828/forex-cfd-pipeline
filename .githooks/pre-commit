@@ -1,0 +1,7 @@
+#!/usr/bin/env sh
+# Use env override if provided, else hard default to pwsh.exe in PATH
+: "\"
+# Resolve repo root; avoid /dev/null so this file is safe if executed by pwsh
+ROOT="\C:/Users/speed/Desktop/forex-standalone"
+HOOK="\C:/Users/speed/Desktop/forex-standalone/.githooks/pre-commit.ps1"
+exec "\" -NoLogo -NoProfile -File "\.githooks/pre-push.ps1"

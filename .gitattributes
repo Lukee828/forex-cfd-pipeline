@@ -24,3 +24,5 @@
 *.sh   text eol=lf
 *.ps1  text eol=lf
 *.ipynb -text
+
+.githooks/* text eol=lf
