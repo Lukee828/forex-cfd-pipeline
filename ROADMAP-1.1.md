@@ -1,30 +1,30 @@
 # Alpha Factory v1.1 Roadmap
 
-**Status:** planning
-**Baseline:** v1.0.1 (tests green)
+**Status:** planning  
+**Baseline:** v1.0.1 (tests green)  
 **Target window:** ~2–4 weeks (iterative releases)
 
 ## Objectives (what v1.1 improves)
-1. **Alpha Factory UX**
-   - CLI: clearer subcommands/help; consistent exit codes.
+1. **Alpha Factory UX**  
+   - CLI: clearer subcommands/help; consistent exit codes.  
    - Better errors & docs snippets for common tasks (ingest, register, export).
 
-2. **Registry & FeatureStore polish**
-   - Rich search (by metric thresholds, tags, date ranges).
-   - Provenance: capture run params & code hash in artifacts.
+2. **Registry & FeatureStore polish**  
+   - Rich search (by metric thresholds, tags, date ranges).  
+   - Provenance: capture run params & code hash in artifacts.  
    - IO hardening (atomic writes; temp->final rename; Windows locks).
 
-3. **Risk & Monitoring**
-   - “Risk Governor” guardrails: parameter sanity checks & stop conditions.
+3. **Risk & Monitoring**  
+   - “Risk Governor” guardrails: parameter sanity checks & stop conditions.  
    - Drift dashboard: daily/weekly refresh script; image + HTML artifacts.
 
-4. **Packaging & CI**
-   - Matrix CI (Win/Linux, Py 3.11): lint, unit, integration, packaging install.
-   - CLI/docs smoke (mkdocs build best-effort).
+4. **Packaging & CI**  
+   - Matrix CI (Win/Linux, Py 3.11): lint, unit, integration, packaging install.  
+   - CLI/docs smoke (mkdocs build best-effort).  
    - Pre-commit cache opt-out on CI; stable line-endings.
 
-5. **Reproducibility**
-   - Deterministic seeds & fixed time windows for grid/backtests.
+5. **Reproducibility**  
+   - Deterministic seeds & fixed time windows for grid/backtests.  
    - One-click “re-run last experiment” helper.
 
 ---
@@ -60,11 +60,11 @@
 ---
 
 ## “Definition of Done” for v1.1
-- ✅ CI green on matrix.
-- ✅ drift job produces artifacts & simple trend plots.
-- ✅ registry search covers tags/metrics/date; docs show examples.
-- ✅ risk guardrails triggered in tests + logged reason codes.
-- ✅ mkdocs builds locally; critical pages linked in nav.
+- ✅ CI green on matrix.  
+- ✅ drift job produces artifacts & simple trend plots.  
+- ✅ registry search covers tags/metrics/date; docs show examples.  
+- ✅ risk guardrails triggered in tests + logged reason codes.  
+- ✅ mkdocs builds locally; critical pages linked in nav.  
 - ✅ CHANGELOG + migration notes (if any).
 
 ---

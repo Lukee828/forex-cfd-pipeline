@@ -1,30 +1,44 @@
-#requires -Version 7
-[CmdletBinding()]
 param(
-  [string]$Branch = $null,
-  [int]$Tail = 80
+  [string]$Branch = (git rev-parse --abbrev-ref HEAD).Trim(),
+  [int]$Tail = 200,
+  [switch]$TestsOnly,
+  [switch]$LintOnly
 )
 
-$ErrorActionPreference = 'Stop'
-
-if ([string]::IsNullOrWhiteSpace($Branch)) {
-  try { $Branch = (git rev-parse --abbrev-ref HEAD).Trim() } catch { $Branch = '' }
-  if ([string]::IsNullOrWhiteSpace($Branch)) { $Branch = 'main' }
+function Get-LatestRunId {
+  param([string]$Branch,[string]$Workflow)
+  $rows = gh run list --branch $Branch -L 40 --json databaseId,workflowName,createdAt | ConvertFrom-Json
+  $rows |
+    Where-Object { $_.workflowName -and ($_.workflowName -eq $Workflow) } |
+    Sort-Object createdAt -Descending |
+    Select-Object -ExpandProperty databaseId -First 1
 }
 
-Write-Host "`nWatching workflows on branch: $Branch (last $Tail lines)" -ForegroundColor Cyan
-
-try {
-  $rows = gh run list --branch $Branch -L 4 --json databaseId,workflowName,status,conclusion,url | ConvertFrom-Json
-} catch {
-  $rows = @()
+function Wait-And-Show {
+  param([int64]$RunId,[int]$Tail)
+  gh run watch $RunId --exit-status | Out-Null
+  $s = gh run view $RunId --json workflowName,status,conclusion,createdAt,updatedAt,url | ConvertFrom-Json
+  "{0} → status={1} conclusion={2}  created={3}  updated={4}`n{5}" -f $s.workflowName,$s.status,$s.conclusion,$s.createdAt,$s.updatedAt,$s.url | Write-Host
+  "`n--- Last $Tail lines ---" | Write-Host
+  gh run view $RunId --log | Select-Object -Last $Tail
 }
 
-foreach ($r in $rows) {
-  Write-Host ("`n--- {0} ({1}) {2}/{3} ---`n{4}" -f $r.workflowName, $r.databaseId, $r.status, ($r.conclusion ?? '-'), $r.url)
-  try {
-    gh run view $r.databaseId --log | Select-Object -Last $Tail
-  } catch {
-    Write-Host "[no log yet]" -ForegroundColor DarkGray
-  }
+Write-Host "Branch: $Branch"
+
+if(-not $LintOnly){
+  gh workflow run "Tests (pytest)" --ref $Branch | Out-Null
+}
+if(-not $TestsOnly){
+  gh workflow run "Lint (Ruff + Black)" --ref $Branch | Out-Null
+}
+
+Start-Sleep -Seconds 3
+
+if(-not $LintOnly){
+  $testId = Get-LatestRunId -Branch $Branch -Workflow 'Tests (pytest)'
+  if ($testId) { Write-Host "`nWaiting for Tests (pytest) run $testId ..."; Wait-And-Show -RunId $testId -Tail $Tail }
+}
+if(-not $TestsOnly){
+  $lintId = Get-LatestRunId -Branch $Branch -Workflow 'Lint (Ruff + Black)'
+  if ($lintId) { Write-Host "`nWaiting for Lint (Ruff + Black) run $lintId ..."; Wait-And-Show -RunId $lintId -Tail $Tail }
 }
