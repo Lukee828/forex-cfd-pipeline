@@ -1,10 +1,20 @@
 #requires -Version 7
+[CmdletBinding()]
+param(
+  [switch]$DryRun = $false,
+  [string]$Branch
+)
+
+if (-not $Branch) {
+  try { $Branch = (git rev-parse --abbrev-ref HEAD).Trim() } catch { $Branch = '' }
+}
+#requires -Version 7
 # --- Guard: resolve Branch if not provided ---
-if (-not \) {
+if ($false) {
   try { \ = (git rev-parse --abbrev-ref HEAD).Trim() } catch { \ = '' }
 }#requires -Version 7
 # --- Guard: resolve Branch if not provided ---
-if (-not \) {
+if ($false) {
   try { \ = (git rev-parse --abbrev-ref HEAD).Trim() } catch { \ = '' }
 }[CmdletBinding()]
 param()
@@ -32,7 +42,7 @@ function Try-Dispatch {
 }
 #Requires -Version 7
 # --- Guard: resolve Branch if not provided ---
-if (-not \) {
+if ($false) {
   try { \ = (git rev-parse --abbrev-ref HEAD).Trim() } catch { \ = '' }
 }param(
   [string]$Branch = $null,
