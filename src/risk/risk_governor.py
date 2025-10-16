@@ -57,6 +57,18 @@ def clamp(v: float, lo: float, hi: float) -> float:
 
 @dataclass
 class RiskGovernorConfig:
+    def _vol_scale(self) -> Tuple[float, dict]:
+        sig_daily = ewma_vol(self._rets, self.cfg.ewma_lambda)
+        sig_ann = sig_daily * np.sqrt(self.cfg.trading_days)
+        if sig_ann <= 0:
+            return 1.0, {"sig_ann": float(sig_ann)}
+
+        target = self.cfg.vol_target
+        floor = self.cfg.vol_floor
+        ceil = self.cfg.vol_ceiling
+        raw = target / sig_ann
+        clamped = float(min(max(raw, floor), ceil))
+        return clamped, {"sig_ann": float(sig_ann), "raw": float(raw), "clamped": clamped}
     # Drawdown guard
     dd_window: int = 100  # bars
     max_drawdown: float = 0.15  # 15%

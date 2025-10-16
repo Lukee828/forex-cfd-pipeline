@@ -2,9 +2,7 @@ from math import isclose
 
 import numpy as np
 
-from src.risk.risk_governor import (
-    rolling_drawdown, ewma_vol, RiskGovernor, RiskGovernorConfig
-)
+from src.risk.risk_governor import rolling_drawdown, ewma_vol, RiskGovernor, RiskGovernorConfig
 
 
 def test_rolling_drawdown_simple():
@@ -49,7 +47,7 @@ def test_risk_governor_vol_throttle():
     rets = rng.normal(0.0, 0.04, size=60)
     scale = None
     for r in rets:
-        eq *= (1.0 + r)
+        eq *= 1.0 + r
         scale, info = rg.update(eq, r)
 
     assert 0.2 < info["vol_ann"] < 1.0  # sanity

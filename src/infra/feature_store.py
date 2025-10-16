@@ -47,8 +47,9 @@ class FeatureStore:
                 con.sql(f'INSERT INTO "{name}" SELECT * FROM df_src')
                 con.unregister("df_src")
 
-    def read_df(self, name: str, where: Optional[str] = None,
-                columns: Optional[Iterable[str]] = None) -> pd.DataFrame:
+    def read_df(
+        self, name: str, where: Optional[str] = None, columns: Optional[Iterable[str]] = None
+    ) -> pd.DataFrame:
         cols = "*"
         if columns:
             cols = ", ".join([f'"{c}"' for c in columns])

@@ -6,6 +6,7 @@ try:
 except Exception:  # pragma: no cover
     SpreadGuardConfig = None  # type: ignore[misc]
 
+
 def new_spread_guard_config(**kwargs: Any) -> Optional[Any]:
     """
     Create a SpreadGuardConfig regardless of the constructor kw name.

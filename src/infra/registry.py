@@ -1,5 +1,4 @@
 from __future__ import annotations
-from pathlib import Path
 import os
 from .feature_store import FeatureStore
 
@@ -9,6 +8,7 @@ TABLES = {
     "ticks": "ticks",
     "risk_snapshots": "risk_snapshots",
 }
+
 
 def get_store(db_path: str | None = None) -> FeatureStore:
     """
