@@ -1,74 +1,80 @@
+# tools/Release-Tag.ps1  (PS7-only)
+[CmdletBinding()]
 param(
-  [Parameter(Position=0)]
-  [string]$Tag,                                 # e.g. v1.0.3
-  [Parameter(Position=1)]
-  [string]$PR,                                  # PR number or full URL; if omitted, uses latest merged into -Branch
-  [string]$Branch = "main",
+  [Parameter(Position=0)] [string]$PR,
+  [string]$Tag,
+  [string]$Branch = 'main',
   [switch]$DryRun
 )
+$ErrorActionPreference = 'Stop'
 
-$ErrorActionPreference = "Stop"
-
-function Resolve-PrNumber([string]$Input){
-  if ([string]::IsNullOrWhiteSpace($Input)) { return $null }
-  if ($Input -match '/pull/(\d+)') { return [int]$Matches[1] }
-  if ($Input -as [int]) { return [int]$Input }
-  throw "Could not parse PR identifier from: $Input"
+function Ensure-InRepo { try { (git rev-parse --show-toplevel) | Out-Null } catch { throw "Not inside a git repository." } }
+function Resolve-PRNumber([string]$p){
+  if ([string]::IsNullOrWhiteSpace($p)) { return $null }
+  if ($p -match '/pull/(\d+)') { return [int]$Matches[1] }
+  if ($p -match '^\d+$')       { return [int]$p }
+  throw "Unrecognized PR identifier: '$p'"
+}
+function Get-LatestMergedPR([string]$base){
+  $json = gh pr list --state merged --base $base --limit 1 --json number,mergedAt,title,headRefName,baseRefName 2>$null
+  if (-not $json) { return $null }
+  ($json | ConvertFrom-Json) | Select-Object -First 1
+}
+function Get-PRDetails([int]$nr){
+  $json = gh pr view $nr --json number,title,body,mergeCommit,mergedAt,baseRefName,headRefName,url 2>$null
+  if (-not $json) { throw "Unable to fetch PR #$nr via gh." }
+  $o = $json | ConvertFrom-Json
+  if (-not $o.mergeCommit) { throw "PR #$nr has no mergeCommit (not merged yet?)." }
+  return $o
+}
+function New-AutoTagName {
+  $tags = (git tag --list 'v1.0.*-auto') -split '\r?\n' | Where-Object { $_ }
+  $max = 0
+  foreach ($t in $tags) { if ($t -match '^v1\.0\.(\d+)-auto$') { $n = [int]$Matches[1]; if ($n -gt $max) { $max = $n } } }
+  "v1.0.{0}-auto" -f ($max + 1)
 }
 
-function Get-LatestMergedPr([string]$Base){
-  $list = gh pr list --state merged --base $Base --limit 1 --search "sort:updated-desc" `
-          --json number,mergedAt,title,url | ConvertFrom-Json
-  if (-not $list -or -not $list[0]) { throw "No merged PRs found into base '$Base'." }
-  return $list[0].number
+Ensure-InRepo
+
+$prNumber = Resolve-PRNumber $PR
+if (-not $prNumber) {
+  $latest = Get-LatestMergedPR $Branch
+  if (-not $latest) { throw "No merged PRs found into '$Branch'." }
+  $prNumber = [int]$latest.number
+  Write-Host "Using latest merged PR into '$Branch': #$prNumber ($($latest.title))"
 }
 
-function Ensure-CommitPresent([string]$Sha){
-  git fetch origin $using:Branch --tags | Out-Null
-  git cat-file -e ($Sha + "^{commit}") 2>$null
-}
+$details = Get-PRDetails $prNumber
 
-# 1) Determine PR
-$prNum = Resolve-PrNumber $PR
-if (-not $prNum) { $prNum = Get-LatestMergedPr $Branch }
+# mergeCommit can be a string or an object { oid = ... } depending on gh version
+$sha = $null
+if ($details.mergeCommit -is [string]) { $sha = $details.mergeCommit }
+elseif ($details.mergeCommit.PSObject.Properties.Name -contains 'oid') { $sha = $details.mergeCommit.oid }
 
-# 2) Inspect PR and validate it is merged into target base
-$info = gh pr view $prNum --json state,mergeCommit,title,body,number,baseRefName,headRefName,mergedAt,url | ConvertFrom-Json
-if ($info.state -ne "MERGED") { throw "PR #$($info.number) is not merged (state=$($info.state))." }
-if ($info.baseRefName -ne $Branch) { throw "PR #$($info.number) base is '$($info.baseRefName)', expected '$Branch'." }
-$sha = $info.mergeCommit
-if (-not $sha) { throw "No merge commit SHA for PR #$($info.number)." }
+if (-not $sha) { throw "Could not resolve merge commit SHA for PR #$prNumber." }
 
-# 3) Choose tag name if not provided
-if (-not $Tag) {
-  # simple monotonic fallback: v1.0.<N>-auto where N = existing count+1
-  $existing = (git tag --list "v1.0.*" | Measure-Object).Count
-  $Tag = "v1.0.{0}-auto" -f ($existing + 1)
-}
+if (-not $Tag) { $Tag = New-AutoTagName }
 
-# 4) Safety checks
-if ((git tag --list $Tag)) { throw "Tag '$Tag' already exists." }
-Ensure-CommitPresent $sha
+Write-Host "Target merge commit: $sha"
+Write-Host "Tag name           : $Tag"
+Write-Host "PR                 : #$prNumber  $($details.url)"
+Write-Host "Title              : $($details.title)"
 
-# 5) Compose message
-$nl = [Environment]::NewLine
-$msg = "Release $Tag$nl$nl$($info.title)$nl$nl$($info.body)"
+$msgLines = @()
+$msgLines += "$($details.title)"
+$msgLines += ""
+$msgLines += "PR: $($details.url)"
+$body = ($details.body ?? '').Trim()
+if ($body) { $msgLines += ""; $msgLines += $body }
+$msg = $msgLines -join [Environment]::NewLine
 
-Write-Host "Target:"
-Write-Host "  PR:    #$($info.number) ($($info.url))"
-Write-Host "  Base:  $($info.baseRefName)"
-Write-Host "  Head:  $($info.headRefName)"
-Write-Host "  Merge: $sha"
-Write-Host "  Tag:   $Tag"
 if ($DryRun) {
-  Write-Host "`n[DryRun] Would create annotated tag and push:"
-  Write-Host "  git tag -a $Tag $sha -m <message>"
+  Write-Host "[DRY RUN] Would run:"
+  Write-Host "  git tag -a $Tag $sha -m '<message>'"
   Write-Host "  git push origin $Tag"
   exit 0
 }
 
-# 6) Create tag on the merge commit and push
 git tag -a $Tag $sha -m $msg
 git push origin $Tag
-
-Write-Host "`nDone. Created and pushed tag '$Tag' at merge commit $sha."
+Write-Host "Tag pushed: $Tag -> $sha"
