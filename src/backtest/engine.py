@@ -1,52 +1,43 @@
-from queue import Queue
-from typing import Iterable, List
-from .events import MarketEvent, SignalEvent, OrderEvent, FillEvent
-from .portfolio import Portfolio
-from .execution import SimulatedBroker
-from .strategy.base import Strategy
+from __future__ import annotations
+from dataclasses import dataclass
+from typing import Dict, Any, Optional
+import numpy as np, pandas as pd
+from src.runtime.risk_governed import GovernorParams, RiskGovernedSizer
 
+@dataclass
+class Costs:
+    bps: float = 5.0
 
-class Engine:
-    def __init__(
-        self,
-        data_stream: Iterable[MarketEvent],
-        strategies: List[Strategy],
-        portfolio: Portfolio,
-        broker: SimulatedBroker,
-    ):
-        self.q: "Queue[object]" = Queue()
-        self.stream = data_stream
-        self.strategies = strategies
-        self.portfolio = portfolio
-        self.broker = broker
-
-    def run(self):
-        for mkt in self.stream:
-            # 1) Market in
-            self.portfolio.mark_to_market(mkt)
-            # 2) Strategies -> Signals
-            for strat in self.strategies:
-                signals = strat.on_market(mkt)
-                for sig in signals:
-                    self.q.put(sig)
-            # 3) Drain queue synchronously (Signal -> Order -> Fill)
-            while not self.q.empty():
-                ev = self.q.get()
-                if isinstance(ev, SignalEvent):
-                    px = mkt.ohlcv_by_sym.get(ev.symbol, {}).get("Close")
-                    if px is None:
-                        continue
-                    order = self.portfolio.on_signal(ev, px)
-                    if order.side != "FLAT" and order.qty > 0:
-                        self.q.put(order)
-                elif isinstance(ev, OrderEvent):
-                    px = mkt.ohlcv_by_sym.get(ev.symbol, {}).get("Close")
-                    if px is None:
-                        continue
-                    fill = self.broker.execute(ev, px)
-                    if fill:
-                        self.q.put(fill)
-                elif isinstance(ev, FillEvent):
-                    self.portfolio.on_fill(ev)
-            # final mark after fills
-            self.portfolio.mark_to_market(mkt)
+def run_backtest(df: pd.DataFrame, signals: pd.Series, costs: Costs = Costs()) -> Dict[str, Any]:
+    df = df.copy()
+    sig = signals.reindex(df.index).fillna(0.0).astype(float)
+    ret = df["close"].pct_change().fillna(0.0)
+    # position = signal (unit), scaled by RiskGovernor
+    eq = 100000.0
+    rp = GovernorParams()
+    rg = RiskGovernedSizer(rp)
+    positions = []
+    scales = []
+    equity = []
+    for i,(t,r) in enumerate(zip(df.index, ret.values)):
+        eq *= (1.0 + (sig.iat[i] * r))
+        scale, info = rg.step(float(df["close"].iat[i]), float(eq))
+        positions.append(sig.iat[i] * scale)
+        scales.append(scale)
+        equity.append(eq)
+    # simple costs on turnover
+    pos = pd.Series(positions, index=df.index)
+    turnover = pos.diff().abs().fillna(0.0)
+    cost = turnover * (costs.bps/10000.0)
+    pnl = (pos.shift(1).fillna(0.0) * ret) - cost
+    curve = (1.0 + pnl).cumprod()
+    out = {
+        "equity_curve": curve,
+        "pnl": pnl,
+        "turnover": turnover,
+        "summary": {
+            "ret": float(curve.iat[-1]-1.0 if len(curve) else 0.0),
+            "vol": float(np.std(pnl.values)*np.sqrt(252)),
+        }
+    }
+    return out
