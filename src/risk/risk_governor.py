@@ -57,7 +57,21 @@ def clamp(v: float, lo: float, hi: float) -> float:
 
 @dataclass
 class RiskGovernorConfig:
-class RiskGovernor:
+class RiskGovernor:    pass
+
+    def _vol_scale(self) -> Tuple[float, dict]:
+        sig_daily = ewma_vol(self._rets, self.cfg.ewma_lambda)
+        sig_ann = sig_daily * np.sqrt(self.cfg.trading_days)
+        if sig_ann <= 0:
+            return 1.0, {"sig_ann": float(sig_ann)}
+        
+        target = self.cfg.vol_target
+        floor = self.cfg.vol_floor
+        ceil = self.cfg.vol_ceiling
+        raw = target / sig_ann
+        clamped = float(min(max(raw, floor), ceil))
+        return clamped, {"sig_ann": float(sig_ann), "raw": float(raw), "clamped": clamped}
+
     """
     Combines a rolling-drawdown guard with a volatility-position throttle.
     Usage:
@@ -84,51 +98,3 @@ return (
             },
         )
     def update(self, equity_value: float,
-
-
-    def _vol_scale(self) -> Tuple[float, dict]:
-
-
-        sig_daily = ewma_vol(self._rets, self.cfg.ewma_lambda)
-
-
-        sig_ann = sig_daily * np.sqrt(self.cfg.trading_days)
-
-
-        if sig_ann <= 0:
-
-
-            return 1.0, {"sig_ann": float(sig_ann)}
-
-
-        
-
-
-        target = self.cfg.vol_target
-
-
-        floor = self.cfg.vol_floor
-
-
-        ceil = self.cfg.vol_ceiling
-
-
-        raw = target / sig_ann
-
-
-        clamped = float(min(max(raw, floor), ceil))
-
-
-        return clamped, {"sig_ann": float(sig_ann), "raw": float(raw), "clamped": clamped}
- ret_value: float) -> Tuple[float, dict]:
-        """Feed latest equity and single-period return; returns (position_scale, diagnostics)."""
-        self._equity.append(float(equity_value))
-        self._rets.append(float(ret_value))
-
-        dd_scale, info_dd = self._dd_scale()
-        vol_scale, info_vol = self._vol_scale()
-
-        # If DD tripped, enforce floor; otherwise throttle by vol
-        scale = dd_scale if info_dd["dd_tripped"] else vol_scale
-        info = {**info_dd, **info_vol, "final_scale": float(scale)}
-        return float(scale), info
