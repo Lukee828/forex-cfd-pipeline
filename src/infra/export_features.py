@@ -9,6 +9,7 @@ from .registry import get_store, TABLES
 # Optional imports; we keep integration soft so local dev never breaks.
 try:
     from src.risk.spread_guard import SpreadGuardConfig, check_spread_ok  # type: ignore
+from ._compat_risk import new_spread_guard_config
 except Exception:  # pragma: no cover - optional
     SpreadGuardConfig = None  # type: ignore
     check_spread_ok = None  # type: ignore
@@ -37,7 +38,7 @@ def gather_risk_features(inp: RiskInputs) -> Dict[str, Any]:
 
     # SpreadGuard
     if SpreadGuardConfig and check_spread_ok:
-        cfg = SpreadGuardConfig(max_spread_bps=25.0)
+        cfg = new_spread_guard_config(max_spread_bps=25.0)
         ok, bps = check_spread_ok(inp.spread_bps, cfg)
         snap["sg_ok"] = bool(ok)
         snap["sg_spread_bps"] = float(bps)
