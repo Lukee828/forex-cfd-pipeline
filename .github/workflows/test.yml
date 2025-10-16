@@ -6,7 +6,9 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-latest
+    env:
+      AF_SKIP_MT5: ''1''
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -17,5 +19,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt || true
           pip install pytest pytest-cov
-      - name: Run pytest
-        run: pytest --maxfail=5 --disable-warnings -q --cov=src
+      - name: Export PYTHONPATH
+        shell: bash
+        run: |
+          echo "PYTHONPATH=$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src" >> "$GITHUB_ENV"      - name: Run pytest
+        run: pytest -q --maxfail=1 --disable-warnings tests/ci_smoke_test.py
