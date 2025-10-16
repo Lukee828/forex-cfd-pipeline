@@ -1,3 +1,14 @@
+# --- Hook env (PYTHONPATH, GIT_RD default) ---
+try {
+  \ = (git rev-parse --show-toplevel).Trim()
+} catch { \ = (Get-Location).Path }
+if([string]::IsNullOrWhiteSpace(\)){
+  \ = "\;\/src"
+} elseif(\ -notmatch [regex]::Escape("\/src")){
+  \ = "\;\;\/src"
+}
+# default: skip remote dispatch unless explicitly opted in
+if(-not \){ \ = '0' }
 # --- Auto-install base deps if requested ---
 if ($env:GIT_AUTO_VENV -eq "1") {
   $pip = Join-Path (Join-Path $PWD ".venv") "Scripts\\pip.exe"
