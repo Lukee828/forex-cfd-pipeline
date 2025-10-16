@@ -25,14 +25,24 @@ jobs:
         run: python -m src.infra.export_features
 
       - name: Export weights
+- name: Upload regression artifacts
+  uses: actions/upload-artifact@v4
+  with:
+    name: regression-${{ github.run_id }}
+    path: |
+      artifacts/regression-*.csv
+      artifacts/regression-*.json
+      artifacts/regression-*.parquet
+    if-no-files-found: ignore
         run: python -m src.infra.export_weights
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-
-      - name: Upload regression artifacts
-        uses: actions/upload-artifact@v4
-        with:
+      - name: Upload feature artifacts
+  uses: actions/upload-artifact@v4
+  with:
+    name: feature-exports-${{ github.run_id }}
+    path: |
+      artifacts/*.parquet
+    if-no-files-found: warn
           name: regression-${{ github.run_id }}
           path: |
             artifacts/regression-*.csv
@@ -42,3 +52,4 @@ jobs:
           name: feature-exports-${{ github.run_id }}
           path: |
             artifacts/*.parquet
+
