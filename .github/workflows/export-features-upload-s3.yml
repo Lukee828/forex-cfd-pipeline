@@ -1,0 +1,49 @@
+name: Export Features — Upload to S3 (optional)
+
+on:
+  workflow_run:
+    workflows: ["Export Features (nightly)"]
+    types: [completed]
+
+jobs:
+  upload:
+    if: >
+      ${{ github.event.workflow_run.conclusion == 'success' &&
+           secrets.FS_S3_BUCKET != '' &&
+           secrets.AWS_REGION != '' &&
+           secrets.AWS_ACCESS_KEY_ID != '' &&
+           secrets.AWS_SECRET_ACCESS_KEY != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts from previous workflow
+        uses: actions/download-artifact@v4
+        with:
+          name: feature-exports-${{ github.event.workflow_run.id }}
+          path: artifacts/exports
+        continue-on-error: true
+
+      - name: Ensure fallback if artifact name differs
+        run: |
+          if [ ! -d "artifacts/exports" ]; then
+            mkdir -p artifacts/exports
+            echo "No artifacts found; nothing to upload."
+          fi
+
+      - name: Install AWS CLI
+        run: |
+          python -m pip install --upgrade pip
+          pip install awscli
+
+      - name: Upload to S3
+        env:
+          FS_S3_BUCKET: ${{ secrets.FS_S3_BUCKET }}
+          AWS_REGION: ${{ secrets.AWS_REGION }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          if [ -d "artifacts/exports" ]; then
+            aws s3 cp "artifacts/exports" "s3://${FS_S3_BUCKET}/exports/${{ github.event.workflow_run.head_branch }}/${{ github.run_id }}/" --recursive --region "${AWS_REGION}"
+            echo "Uploaded to s3://${FS_S3_BUCKET}/exports/..."
+          else
+            echo "Nothing to upload."
+          fi
