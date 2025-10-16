@@ -1,0 +1,35 @@
+name: drift-dashboard
+
+on:
+  workflow_run:
+    workflows: ["nightly"]
+    types: [completed]
+
+jobs:
+  drift:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pandas matplotlib pyarrow
+
+      - name: Generate drift dashboard
+        run: python -m src.infra.drift_dashboard
+
+      - name: Upload drift artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: drift-dashboard-${{ github.run_id }}
+          path: |
+            artifacts/drift_dashboard.html
+            artifacts/drift_summary.csv
+            artifacts/drift_dashboard.png
