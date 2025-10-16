@@ -82,7 +82,7 @@ def gather_risk_features(inp: RiskInputs) -> Dict[str, Any]:
     return snap
 
 
-def export_risk_snapshot(inp: RiskInputs, db_path: Optional[str] = None, table: str = "features") -> str:
+def export_risk_snapshot(inp: RiskInputs, db_path: Optional[str] = None, table: str = 'risk_snapshots') -> str:
     df = pd.DataFrame([gather_risk_features(inp)])
 
     if not db_path:
