@@ -1,107 +1,128 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from collections import deque
-from typing import Deque, Iterable, Tuple, Optional
+from typing import Tuple, Optional, Dict, List
 
 import numpy as np
 
 
-def rolling_drawdown(equity: Iterable[float], window: int) -> Tuple[float, float]:
+def rolling_drawdown(equity: List[float], window: int) -> Tuple[float, float]:
     """
-    Returns (current_dd, max_dd) over the last `window` points of an equity curve.
-    Drawdown is computed as (peak - value) / peak with peak tracked over the window.
+    Compute current and rolling max drawdown over the last `window` points.
+
+    Returns:
+        cur_dd: drawdown of the last point vs the max in-window
+        max_dd: maximum drawdown within the window
     """
-    arr = np.asarray(list(equity), dtype=float)
-    if arr.size == 0:
-        return (0.0, 0.0)
-    if window > arr.size:
-        window = arr.size
-    # Focus on last `window` points
-    tail = arr[-window:]
-    peaks = np.maximum.accumulate(tail)
-    dd = (peaks - tail) / np.where(peaks == 0.0, 1.0, peaks)
-    current_dd = float(dd[-1])
-    max_dd = float(dd.max(initial=0.0))
-    # Guard for NaNs/Infs
-    if not np.isfinite(current_dd):
-        current_dd = 0.0
-    if not np.isfinite(max_dd):
-        max_dd = 0.0
-    current_dd = max(0.0, min(1.0, current_dd))
-    max_dd = max(0.0, min(1.0, max_dd))
-    return current_dd, max_dd
+    if not equity:
+        return 0.0, 0.0
+    x = np.asarray(equity, dtype=float)
+    w = min(window, len(x))
+    seg = x[-w:]
+    peaks = np.maximum.accumulate(seg)
+    dd = (peaks - seg) / np.maximum(peaks, 1e-12)
+    cur_dd = float(dd[-1])
+    max_dd = float(dd.max() if dd.size else 0.0)
+    return cur_dd, max_dd
 
 
-def ewma_vol(returns: Iterable[float], lam: float = 0.94) -> float:
+def ewma_vol(rets: List[float], lam: float) -> float:
     """
-    EWMA volatility (daily). lam in [0,1), higher = longer memory.
-    Returns standard deviation of the EWMA process.
+    EWMA daily volatility (stdev) of returns.
     """
-    r = np.asarray(list(returns), dtype=float)
-    if r.size == 0:
+    if not rets:
         return 0.0
-    # Normalize NaNs
-    r = np.nan_to_num(r, nan=0.0, posinf=0.0, neginf=0.0)
-    w = np.array([lam ** (r.size - 1 - i) for i in range(r.size)], dtype=float)
-    w /= w.sum() if w.sum() != 0 else 1.0
-    mu = np.sum(w * r)
-    var = np.sum(w * (r - mu) ** 2)
-    sigma = float(np.sqrt(max(0.0, var)))
-    return sigma
-
-
-def clamp(v: float, lo: float, hi: float) -> float:
-    return max(lo, min(hi, v))
+    r = np.asarray(rets, dtype=float)
+    lam = float(lam)
+    if lam <= 0.0 or lam >= 1.0 or r.size == 0:
+        return float(np.std(r, ddof=1) if r.size > 1 else np.std(r))
+    w = (1.0 - lam) * np.power(lam, np.arange(r.size - 1, -1, -1, dtype=float))
+    w /= w.sum()
+    mu = float((w * r).sum())
+    var = float((w * (r - mu) ** 2).sum())
+    sig = np.sqrt(max(var, 0.0))
+    return float(sig)
 
 
 @dataclass
 class RiskGovernorConfig:
-    pass
+    # drawdown guard
+    dd_window: int = 100
+    max_drawdown: float = 0.20
+    dd_floor_scale: float = 0.25
+    eps: float = 1e-9
 
-    def _vol_scale(self) -> Tuple[float, dict]:
-        sig_daily = ewma_vol(self._rets, self.cfg.ewma_lambda)
-        sig_ann = sig_daily * np.sqrt(self.cfg.trading_days)
-        if sig_ann <= 0:
-            return 1.0, {"sig_ann": float(sig_ann)}
+    # volatility throttle
+    ewma_lambda: float = 0.94
+    trading_days: int = 252
+    vol_target: float = 0.15        # annualized target vol
+    vol_floor: float = 0.25         # min leverage factor
+    vol_ceiling: float = 2.0        # max leverage factor
 
-        target = self.cfg.vol_target
-        floor = self.cfg.vol_floor
-        ceil = self.cfg.vol_ceiling
-        raw = target / sig_ann
-        clamped = float(min(max(raw, floor), ceil))
-        return clamped, {"sig_ann": float(sig_ann), "raw": float(raw), "clamped": clamped}
+
 class RiskGovernor:
-    pass
+    """
+    Combines a drawdown gate and an EWMA vol throttle to produce a final risk scale.
+    """
 
-    def _vol_scale(self) -> Tuple[float, dict]:
-        sig_daily = ewma_vol(self._rets, self.cfg.ewma_lambda)
-        sig_ann = sig_daily * np.sqrt(self.cfg.trading_days)
-        if sig_ann <= 0:
-            return 1.0, {"sig_ann": float(sig_ann)}
-
-        target = self.cfg.vol_target
-        floor = self.cfg.vol_floor
-        ceil = self.cfg.vol_ceiling
-        raw = target / sig_ann
-        clamped = float(min(max(raw, floor), ceil))
-        return clamped, {"sig_ann": float(sig_ann), "raw": float(raw), "clamped": clamped}
-    pass
-
-    def __init__(self, cfg: Optional[RiskGovernorConfig] = None) -> None:
+    def __init__(self, cfg: Optional[RiskGovernorConfig] = None):
         self.cfg = cfg or RiskGovernorConfig()
-        self._equity: Deque[float] = deque(maxlen=max(self.cfg.dd_window, 1))
-        self._rets: Deque[float] = deque(maxlen=max(self.cfg.vol_window, 1))
+        self._equity: List[float] = []
+        self._rets: List[float] = []
 
-    def _dd_scale(self) -> Tuple[float, dict]:
+    def update(self, equity_value: float, ret: Optional[float] = None) -> None:
+        """
+        Feed latest equity and (optionally) return.
+        If return is None and we have a previous equity, compute simple return.
+        """
+        equity_value = float(equity_value)
+        if self._equity and ret is None:
+            prev = self._equity[-1]
+            if prev != 0.0:
+                ret = (equity_value - prev) / prev
+            else:
+                ret = 0.0
+        if ret is not None:
+            self._rets.append(float(ret))
+        self._equity.append(equity_value)
+
+    # --- internal helpers -------------------------------------------------
+
+    def _dd_gate(self) -> Tuple[float, Dict]:
         cur_dd, max_dd = rolling_drawdown(self._equity, self.cfg.dd_window)
         tripped = max_dd >= (self.cfg.max_drawdown - self.cfg.eps)
-return (
-            self.cfg.dd_floor_scale if tripped else 1.0,
-            {
-                "current_dd": cur_dd,
-                "max_dd": max_dd,
-                "dd_tripped": tripped,
-            },
-        )
-    def update(self, equity_value: float,
+        scale = self.cfg.dd_floor_scale if tripped else 1.0
+        info = {
+            "cur_dd": float(cur_dd),
+            "max_dd": float(max_dd),
+            "tripped": bool(tripped),
+            "dd_scale": float(scale),
+        }
+        return float(scale), info
+
+    def _vol_scale(self) -> Tuple[float, Dict]:
+        sig_daily = ewma_vol(self._rets, self.cfg.ewma_lambda)
+        sig_ann = sig_daily * np.sqrt(self.cfg.trading_days)
+        if sig_ann <= 0:
+            return 1.0, {"sig_ann": float(sig_ann), "raw": None, "clamped": 1.0}
+        target = self.cfg.vol_target
+        floor = self.cfg.vol_floor
+        ceil = self.cfg.vol_ceiling
+        raw = target / float(sig_ann)
+        clamped = float(min(max(raw, floor), ceil))
+        return clamped, {"sig_ann": float(sig_ann), "raw": float(raw), "clamped": clamped}
+
+    # --- public API -------------------------------------------------------
+
+    def scale(self) -> Tuple[float, Dict]:
+        """
+        Final scale and info. If DD gate trips, it dominates; otherwise use vol throttle.
+        """
+        dd_scale, info_dd = self._dd_gate()
+        if dd_scale < 1.0 - self.cfg.eps:
+            info = {**info_dd, "final_scale": float(dd_scale), "mode": "dd_floor"}
+            return float(dd_scale), info
+        vol_scale, info_vol = self._vol_scale()
+        scale = float(vol_scale)
+        info = {**info_dd, **info_vol, "final_scale": scale, "mode": "vol"}
+        return scale, info
