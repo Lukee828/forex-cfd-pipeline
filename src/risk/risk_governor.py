@@ -79,20 +79,20 @@ class RiskGovernor:
         self.cfg = cfg or RiskGovernorConfig()
         self._equity: List[float] = []
         self._rets: List[float] = []
+    def update(self, equity_value: float, ret: float) -> Tuple[float, Dict]:
+        # append state
+        self._equity.append(float(equity_value))
+        self._rets.append(float(ret))
 
-    def update(self, equity_value: float, ret: Optional[float] = None) -> Tuple[float, Dict]:
-        """Feed latest equity/return and return (scale, info)."""
-        equity_value = float(equity_value)
-        if self._equity and ret is None:
-            prev = self._equity[-1]
-            ret = (equity_value - prev) / prev if prev != 0.0 else 0.0
-        if ret is not None:
-            self._rets.append(float(ret))
-        self._equity.append(equity_value)
-        return self.scale()
+        # gates
+        dd_scale, info_dd = self._dd_gate()
+        vol_scale, info_vol = self._vol_scale()
 
-    # ---- internals ----
-    def _dd_gate(self) -> Tuple[float, Dict]:
+        # combine (be conservative)
+        final_scale = float(min(dd_scale, vol_scale))
+        info = {**info_dd, **info_vol, "final_scale": final_scale}
+
+        return final_scale, info    def _dd_gate(self) -> Tuple[float, Dict]:
         cur_dd, max_dd = rolling_drawdown(self._equity, self.cfg.dd_window)
         dd_tripped = max_dd >= (self.cfg.max_drawdown - self.cfg.eps)
         scale = self.cfg.dd_floor_scale if dd_tripped else 1.0
