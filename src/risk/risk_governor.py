@@ -57,35 +57,6 @@ def clamp(v: float, lo: float, hi: float) -> float:
 
 @dataclass
 class RiskGovernorConfig:
-    def _vol_scale(self) -> Tuple[float, dict]:
-        sig_daily = ewma_vol(self._rets, self.cfg.ewma_lambda)
-        sig_ann = sig_daily * np.sqrt(self.cfg.trading_days)
-        if sig_ann <= 0:
-            return 1.0, {"sig_ann": float(sig_ann)}
-
-        target = self.cfg.vol_target
-        floor = self.cfg.vol_floor
-        ceil = self.cfg.vol_ceiling
-        raw = target / sig_ann
-        clamped = float(min(max(raw, floor), ceil))
-        return clamped, {"sig_ann": float(sig_ann), "raw": float(raw), "clamped": clamped}
-    # Drawdown guard
-    dd_window: int = 100  # bars
-    max_drawdown: float = 0.15  # 15%
-    dd_floor_scale: float = 0.0  # position scale when DD guard trips
-
-    # Volatility throttle
-    vol_target_annual: float = 0.20  # 20% annualized target vol
-    vol_min_scale: float = 0.0
-    vol_max_scale: float = 1.0
-    ewma_lambda: float = 0.94
-    vol_window: int = 60  # bars (daily returns recommended)
-
-    # Numerics
-    eps: float = 1e-12
-    trading_days: int = 252
-
-
 class RiskGovernor:
     """
     Combines a rolling-drawdown guard with a volatility-position throttle.
@@ -112,19 +83,44 @@ return (
                 "dd_tripped": tripped,
             },
         )
+    def update(self, equity_value: float,
+
+
     def _vol_scale(self) -> Tuple[float, dict]:
+
+
         sig_daily = ewma_vol(self._rets, self.cfg.ewma_lambda)
+
+
         sig_ann = sig_daily * np.sqrt(self.cfg.trading_days)
+
+
         if sig_ann <= 0:
+
+
             return 1.0, {"sig_ann": float(sig_ann)}
 
+
+        
+
+
         target = self.cfg.vol_target
+
+
         floor = self.cfg.vol_floor
+
+
         ceil = self.cfg.vol_ceiling
+
+
         raw = target / sig_ann
-        clamped = float(max(min(raw, ceil), floor))
+
+
+        clamped = float(min(max(raw, floor), ceil))
+
+
         return clamped, {"sig_ann": float(sig_ann), "raw": float(raw), "clamped": clamped}
-    def update(self, equity_value: float, ret_value: float) -> Tuple[float, dict]:
+ ret_value: float) -> Tuple[float, dict]:
         """Feed latest equity and single-period return; returns (position_scale, diagnostics)."""
         self._equity.append(float(equity_value))
         self._rets.append(float(ret_value))
