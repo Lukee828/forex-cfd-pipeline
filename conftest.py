@@ -1,15 +1,20 @@
 from __future__ import annotations
-import os, pytest
+import os, os.path as op
 
-# Skip legacy suites by default. Re-enable with: RUN_LEGACY_TESTS=1
-RUN_LEGACY = os.getenv("RUN_LEGACY_TESTS","0") == "1"
+RUN_LEGACY = os.getenv("RUN_LEGACY_TESTS", "0") == "1"
 
-def pytest_collection_modifyitems(config, items):
+def _is_legacy(path: str) -> bool:
+    p = path.replace("\\", "/")
+    if "/tests/alpha_factory/" in p:
+        return True
+    if "/tests/registry/" in p:
+        return True
+    if p.endswith("/tests/test_ob_logic.py"):
+        return True
+    return False
+
+def pytest_ignore_collect(path, config):
+    # Block collection (and thus imports) of legacy suites unless explicitly enabled
     if RUN_LEGACY:
-        return
-    skip = pytest.mark.skip(reason="Skipping legacy alpha_factory/registry/ob_logic until wired into current infra.")
-    for item in items:
-        p = str(item.fspath).replace("\\\\","/")
-        if ("/tests/alpha_factory/" in p) or ("/tests/registry/" in p) or p.endswith("/tests/test_ob_logic.py"):
-            item.add_marker(skip)
-
+        return False
+    return _is_legacy(str(path))
