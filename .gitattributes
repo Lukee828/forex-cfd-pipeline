@@ -14,4 +14,3 @@
 *.ipynb -text
 
 .githooks/* text eol=lf
-
