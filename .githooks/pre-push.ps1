@@ -1,3 +1,13 @@
+# --- Auto-install base deps if requested ---
+if ($env:GIT_AUTO_VENV -eq "1") {
+  $pip = Join-Path (Join-Path $PWD ".venv") "Scripts\\pip.exe"
+  if (Test-Path $pip) {
+    Write-Host "[hook] Auto-installing base packages (numpy, pandas, pip-tools)..." -ForegroundColor DarkGray
+    & $pip install numpy pandas pip-tools -q
+  } else {
+    Write-Warning "[hook] .venv not found for auto-install."
+  }
+}
 #requires -Version 7
 $ErrorActionPreference = 'Continue'
 $PSStyle.OutputRendering = 'Host'
