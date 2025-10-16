@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Tuple
 
 import duckdb
 import pandas as pd
@@ -28,6 +28,25 @@ class FeatureStore:
             self._con = duckdb.connect(self.db_path)
         return self._con
 
+    @staticmethod
+    def _split_schema_table(name: str) -> Tuple[Optional[str], str]:
+        """
+        Split a (possibly) schema-qualified name: 'schema.table' -> ('schema','table')
+        If no schema, returns (None, name).
+        """
+        parts = name.split(".", 1)
+        if len(parts) == 2:
+            return parts[0], parts[1]
+        return None, name
+
+    def _ensure_schema(self, table: str) -> None:
+        """
+        If 'schema.table' is provided and the schema doesn't exist, create it.
+        """
+        schema, _ = self._split_schema_table(table)
+        if schema:
+            self.con.execute(f"CREATE SCHEMA IF NOT EXISTS {schema}")
+
     def write_df(self, table: str, df: pd.DataFrame, mode: str = "append") -> None:
         """
         Write a DataFrame into a DuckDB table.
@@ -37,6 +56,9 @@ class FeatureStore:
         """
         if not isinstance(df, pd.DataFrame):
             raise TypeError("df must be a pandas.DataFrame")
+
+        # Make sure schema exists when schema-qualified name is used
+        self._ensure_schema(table)
 
         # Register the DataFrame for SQL
         self.con.register("df", df)
@@ -50,7 +72,6 @@ class FeatureStore:
             else:
                 raise ValueError("mode must be 'replace' or 'append'")
         finally:
-            # it's fine to leave the relation registered; but we can clean it explicitly:
             try:
                 self.con.unregister("df")
             except Exception:
