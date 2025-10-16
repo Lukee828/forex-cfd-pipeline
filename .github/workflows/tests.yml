@@ -19,13 +19,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt -c .github/constraints-ci.txt || true
           pip install pytest pytest-cov -c .github/constraints-ci.txt
-      - name: Set PYTHONPATH (src + repo root)
-  run: |
-    echo "PYTHONPATH=$GITHUB_WORKSPACE/src:$GITHUB_WORKSPACE" >> $GITHUB_ENV
-        run: echo "PYTHONPATH=\/src:\" >> \
+  - name: Set PYTHONPATH (repo root first)
+    shell: bash
+    run: |
+      echo "PYTHONPATH=$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
 
-      - name: Run pytest
         run: pytest -q --maxfail=1 --disable-warnings tests/ci_smoke_test.py
+
 
 
 
