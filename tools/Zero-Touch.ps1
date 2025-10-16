@@ -104,7 +104,7 @@ foreach(\$r in \$rows){
   "`n--- {0} ({1}) {2}/{3} ---`n{4}" -f \$r.workflowName,\$r.databaseId,\$r.status,(\$r.conclusion ?? '-'),\$r.url
   try { gh run view \$r.databaseId --log | Select-Object -Last \$Tail } catch { Write-Host "[no log yet]" -ForegroundColor DarkGray }
 }
-"@
+'@
 if (Ensure-FileContent -File $watchPath -Content $watchContent) {
   Step "Created/updated $watchPath" 'Green'
   Mark-Changed $watchPath
