@@ -85,8 +85,8 @@ $dirty = git status --porcelain
 
 # --- Autofix: stage & commit pre-commit changes (BEGIN) ---
 try {
-  \ = git status --porcelain
-  if (-not [string]::IsNullOrWhiteSpace(\)) {
+$dirty = git status --porcelain
+  if (-not [string]::IsNullOrWhiteSpace($dirty)) {
     git add -A | Out-Null
     git commit -m "chore(pre-commit): apply EOF/trailing whitespace fixes" | Out-Null
     Write-Host "[hook] Committed pre-commit autofixes." -ForegroundColor DarkGray
