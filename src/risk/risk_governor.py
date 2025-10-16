@@ -91,8 +91,9 @@ class RiskGovernor:
         # combine (be conservative)
         final_scale = float(min(dd_scale, vol_scale))
         info = {**info_dd, **info_vol, "final_scale": final_scale}
-
-        return final_scale, info    def _dd_gate(self) -> Tuple[float, Dict]:
+        return final_scale, info    
+        
+    def _dd_gate(self) -> Tuple[float, Dict]:
         cur_dd, max_dd = rolling_drawdown(self._equity, self.cfg.dd_window)
         dd_tripped = max_dd >= (self.cfg.max_drawdown - self.cfg.eps)
         scale = self.cfg.dd_floor_scale if dd_tripped else 1.0
