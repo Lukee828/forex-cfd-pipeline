@@ -92,30 +92,25 @@ class RiskGovernor:
         return self.scale()
 
     # ---- internals ----
-
     def _dd_gate(self) -> Tuple[float, Dict]:
         cur_dd, max_dd = rolling_drawdown(self._equity, self.cfg.dd_window)
-        tripped = max_dd >= (self.cfg.max_drawdown - self.cfg.eps)
-        scale = self.cfg.dd_floor_scale if tripped else 1.0
+        dd_tripped = max_dd >= (self.cfg.max_drawdown - self.cfg.eps)
+        scale = self.cfg.dd_floor_scale if dd_tripped else 1.0
         info = {
             "cur_dd": float(cur_dd),
             "max_dd": float(max_dd),
-            "tripped": bool(tripped),
+            "dd_tripped": bool(dd_tripped),
             "dd_scale": float(scale),
         }
         return float(scale), info
-
     def _vol_scale(self) -> Tuple[float, Dict]:
         sig_daily = ewma_vol(self._rets, self.cfg.ewma_lambda or 0.94)
-        sig_ann = sig_daily * np.sqrt(self.cfg.trading_days)
-        if sig_ann <= 0:
-            return 1.0, {"sig_ann": float(sig_ann), "raw": None, "clamped": 1.0}
-        raw = float(self.cfg.vol_target / sig_ann)
-        clamped = float(min(max(raw, float(self.cfg.vol_floor)), float(self.cfg.vol_ceiling)))
-        return clamped, {"sig_ann": float(sig_ann), "raw": raw, "clamped": clamped}
-
-    # ---- public ----
-
+        vol_ann = sig_daily * np.sqrt(self.cfg.trading_days)
+        if vol_ann <= 0:
+            return 1.0, {"vol_ann": float(vol_ann), "vol_raw": None, "vol_clamped": 1.0}
+        vol_raw = float(self.cfg.vol_target / vol_ann)
+        vol_clamped = float(min(max(vol_raw, float(self.cfg.vol_floor)), float(self.cfg.vol_ceiling)))
+        return vol_clamped, {"vol_ann": float(vol_ann), "vol_raw": vol_raw, "vol_clamped": vol_clamped}
     def scale(self) -> Tuple[float, Dict]:
         dd_scale, info_dd = self._dd_gate()
         if dd_scale < 1.0 - self.cfg.eps:
