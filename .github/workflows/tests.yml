@@ -19,6 +19,9 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt -c .github/constraints-ci.txt || true
           pip install pytest pytest-cov -c .github/constraints-ci.txt
+      - name: Set PYTHONPATH (src + repo root)
+        run: echo "PYTHONPATH=\/src:\" >> \
 
       - name: Run pytest
         run: pytest -q --maxfail=1 --disable-warnings
+
