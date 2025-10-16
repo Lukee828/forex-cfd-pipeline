@@ -43,7 +43,10 @@ def gather_risk_features(inp: RiskInputs) -> Dict[str, Any]:
 
     # SpreadGuard (if available)
     if SpreadGuardConfig and check_spread_ok:
-        cfg = new_spread_guard_config(SpreadGuardConfig, max_spread_bps=25.0)
+        try:
+            cfg = new_spread_guard_config(SpreadGuardConfig, max_spread_bps=25.0)  # compat: helper that expects the class
+        except TypeError:
+            cfg = new_spread_guard_config(max_spread_bps=25.0)  # compat: helper that builds internally
         try:
             snap["spread_ok"] = bool(check_spread_ok(float(inp.spread_bps), cfg))
         except Exception:
