@@ -29,6 +29,15 @@ jobs:
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
+
+      - name: Upload regression artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: regression-${{ github.run_id }}
+          path: |
+            artifacts/regression-*.csv
+            artifacts/regression-*.json
+            artifacts/regression-*.parquet
         with:
           name: feature-exports-${{ github.run_id }}
           path: |
