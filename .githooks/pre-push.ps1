@@ -30,7 +30,11 @@ if ($env:GIT_AUTO_VENV -eq "1") {
   }
 }
 #requires -Version 7
-# --- [VENV SHIM] prefer repo venv python/pip on PATH ---
+# --- ultra-fast bypass ---
+if ($env:GIT_FAST -eq '1') {
+  Write-Host "[pre-push] FAST mode: skipping all checks." -ForegroundColor Yellow
+  exit 0
+}# --- [VENV SHIM] prefer repo venv python/pip on PATH ---
 try {
   $venvBin = Join-Path (Get-Location) '.venv\Scripts'
   if (Test-Path $venvBin) {
