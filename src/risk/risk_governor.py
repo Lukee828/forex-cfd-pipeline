@@ -57,29 +57,36 @@ def clamp(v: float, lo: float, hi: float) -> float:
 
 @dataclass
 class RiskGovernorConfig:
-class RiskGovernor:    pass
+    pass
 
     def _vol_scale(self) -> Tuple[float, dict]:
         sig_daily = ewma_vol(self._rets, self.cfg.ewma_lambda)
         sig_ann = sig_daily * np.sqrt(self.cfg.trading_days)
         if sig_ann <= 0:
             return 1.0, {"sig_ann": float(sig_ann)}
-        
+
         target = self.cfg.vol_target
         floor = self.cfg.vol_floor
         ceil = self.cfg.vol_ceiling
         raw = target / sig_ann
         clamped = float(min(max(raw, floor), ceil))
         return clamped, {"sig_ann": float(sig_ann), "raw": float(raw), "clamped": clamped}
+class RiskGovernor:
+    pass
 
-    """
-    Combines a rolling-drawdown guard with a volatility-position throttle.
-    Usage:
-        rg = RiskGovernor()
-        for equity_t, ret_t in stream:
-            scale, info = rg.update(equity_t, ret_t)
-            # use `scale` to modulate gross exposure (0..1)
-    """
+    def _vol_scale(self) -> Tuple[float, dict]:
+        sig_daily = ewma_vol(self._rets, self.cfg.ewma_lambda)
+        sig_ann = sig_daily * np.sqrt(self.cfg.trading_days)
+        if sig_ann <= 0:
+            return 1.0, {"sig_ann": float(sig_ann)}
+
+        target = self.cfg.vol_target
+        floor = self.cfg.vol_floor
+        ceil = self.cfg.vol_ceiling
+        raw = target / sig_ann
+        clamped = float(min(max(raw, floor), ceil))
+        return clamped, {"sig_ann": float(sig_ann), "raw": float(raw), "clamped": clamped}
+    pass
 
     def __init__(self, cfg: Optional[RiskGovernorConfig] = None) -> None:
         self.cfg = cfg or RiskGovernorConfig()
