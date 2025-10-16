@@ -8,7 +8,8 @@ if ([string]::IsNullOrWhiteSpace($env:PYTHONPATH)) {
   $env:PYTHONPATH = "$env:PYTHONPATH;$repo;$repo/src"
 }
 # default: skip remote dispatch unless explicitly opted in
-if (-not $env:GIT_RD) { $env:GIT_RD = '0' }# --- Auto-install base deps if requested ---
+if (-not $env:GIT_RD) { $env:GIT_RD = '0' }
+# --- Auto-install base deps if requested ---
 if ($env:GIT_AUTO_VENV -eq "1") {
   $pip = Join-Path (Join-Path $PWD ".venv") "Scripts\\pip.exe"
   if (Test-Path $pip) {
