@@ -70,3 +70,15 @@ if ($env:GIT_RD -ne '0') { Invoke-RepoDoctor }
 
 Write-Host "[pre-push] checks completed." -ForegroundColor Green
 exit 0
+
+# --- Autofix: stage & commit any changes made by pre-commit ---
+try {
+  \ = git status --porcelain
+  if (-not [string]::IsNullOrWhiteSpace(\)) {
+    git add -A | Out-Null
+    git commit -m "chore(pre-commit): apply EOF/trailing whitespace fixes" | Out-Null
+    Write-Host "[hook] Committed pre-commit autofixes." -ForegroundColor DarkGray
+  }
+} catch {
+  Write-Warning "[hook] Could not auto-commit pre-commit fixes: \"
+}

@@ -1,6 +1,12 @@
 #requires -Version 7
-#requires -Version 7
-[CmdletBinding()]
+# --- Guard: resolve Branch if not provided ---
+if (-not \) {
+  try { \ = (git rev-parse --abbrev-ref HEAD).Trim() } catch { \ = '' }
+}#requires -Version 7
+# --- Guard: resolve Branch if not provided ---
+if (-not \) {
+  try { \ = (git rev-parse --abbrev-ref HEAD).Trim() } catch { \ = '' }
+}[CmdletBinding()]
 param()
 function Try-Dispatch {
   param(
@@ -25,8 +31,11 @@ function Try-Dispatch {
   }
 }
 #Requires -Version 7
-param(
-  [string]$Branch = $(git rev-parse --abbrev-ref HEAD),
+# --- Guard: resolve Branch if not provided ---
+if (-not \) {
+  try { \ = (git rev-parse --abbrev-ref HEAD).Trim() } catch { \ = '' }
+}param(
+  [string]$Branch = $null,
   [int]$Tail = 100,
   [switch]$NoTrigger,
   [switch]$NoWatch,
