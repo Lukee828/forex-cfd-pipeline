@@ -16,7 +16,8 @@ if (-not $Branch) {
 if ($false) {
 }
   try { \ = (git rev-parse --abbrev-ref HEAD).Trim() } catch { \ = '' }
-}#requires -Version 7
+}
+#requires -Version 7
 # --- Guard: resolve Branch if not provided ---
 if ($false) {
   try { \ = (git rev-parse --abbrev-ref HEAD).Trim() } catch { \ = '' }
