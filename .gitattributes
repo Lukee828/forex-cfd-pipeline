@@ -12,3 +12,6 @@
 
 # Keep notebooks as binary
 *.ipynb -text
+
+.githooks/* text eol=lf
+
