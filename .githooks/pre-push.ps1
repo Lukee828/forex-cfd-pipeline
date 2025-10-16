@@ -1,4 +1,14 @@
-# --- Hook env (PYTHONPATH, GIT_RD default) ---
+# --- [PYTHONPATH GUARD] add repo/src if missing ---
+try {
+  $repo = (git rev-parse --show-toplevel).Trim()
+} catch { $repo = (Get-Location).Path }
+if (-not [string]::IsNullOrWhiteSpace($repo)) {
+  if ([string]::IsNullOrWhiteSpace($env:PYTHONPATH)) {
+    $env:PYTHONPATH = "$repo;$repo/src"
+  } elseif ($env:PYTHONPATH -notmatch [regex]::Escape("$repo/src")) {
+    $env:PYTHONPATH = "$env:PYTHONPATH;$repo;$repo/src"
+  }
+}# --- Hook env (PYTHONPATH, GIT_RD default) ---
 try {
   $repo = (git rev-parse --show-toplevel).Trim()
 } catch { $repo = (Get-Location).Path }
@@ -20,7 +30,13 @@ if ($env:GIT_AUTO_VENV -eq "1") {
   }
 }
 #requires -Version 7
-$ErrorActionPreference = 'Continue'
+# --- [VENV SHIM] prefer repo venv python/pip on PATH ---
+try {
+  $venvBin = Join-Path (Get-Location) '.venv\Scripts'
+  if (Test-Path $venvBin) {
+    $env:PATH = "$venvBin;$env:PATH"
+  }
+} catch {}$ErrorActionPreference = 'Continue'
 $PSStyle.OutputRendering = 'Host'
 
 Write-Host "[pre-push] running checks..." -ForegroundColor Cyan
@@ -97,3 +113,24 @@ $dirty = git status --porcelain
   Write-Warning "[hook] Could not auto-commit pre-commit fixes: \"
 }
 # --- Autofix: stage & commit pre-commit changes (END) ---
+# --- [PRE-COMMIT AUTOFIX] run & commit modifications, then verify clean ---
+try {
+  if (Get-Command pre-commit -ErrorAction SilentlyContinue) {
+    Write-Host "Running pre-commit -a to apply autofixes..." -ForegroundColor DarkGray
+    & pre-commit run -a
+
+    $dirty = git status --porcelain
+    if (-not [string]::IsNullOrWhiteSpace($dirty)) {
+      git add -A | Out-Null
+      try { git commit -m "chore(pre-commit): apply EOF/trailing whitespace fixes" 2>$null | Out-Null } catch {}
+      Write-Host "Committed pre-commit autofixes." -ForegroundColor DarkGray
+      & pre-commit run -a
+    } else {
+      Write-Host "pre-commit produced no changes." -ForegroundColor DarkGray
+    }
+  } else {
+    Write-Host "pre-commit not on PATH; skipping autofix." -ForegroundColor Yellow
+  }
+} catch {
+  Write-Host "pre-commit autofix encountered: $($_.Exception.Message)" -ForegroundColor Yellow
+}
