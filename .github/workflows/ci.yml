@@ -1,5 +1,3 @@
-env:
-  AF_SKIP_MT5: '1'
 name: ci
 
 on:
@@ -27,4 +25,3 @@ jobs:
         run: black --check .
       - name: Pytest
         run: python -m pytest -q
-
