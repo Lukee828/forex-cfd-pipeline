@@ -39,6 +39,7 @@ def gather_risk_features(inp: RiskInputs) -> Dict[str, Any]:
         "pair": inp.pair,
         "ts": datetime.now(timezone.utc).isoformat(),
         "spread_bps": float(inp.spread_bps),
+            "sg_spread_bps": float(inp.spread_bps),
     }
 
     # SpreadGuard (if available)
