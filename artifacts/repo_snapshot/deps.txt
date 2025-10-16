@@ -1,0 +1,79 @@
+=== requirements.txt ===
+numpy>=1.24,<3
+pandas>=2.2,<3
+
+matplotlib>=3.8,<4
+duckdb>=1.0,<2.0
+
+pytest
+
+=== requirements-dev.txt ===
+pytest>=7.4
+black>=24.3
+ruff>=0.5.0
+pre-commit>=3.6
+yfinance>=0.2.50
+
+yfinance>=0.2.0
+
+=== pyproject.toml ===
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "zigzagob"
+version = "0.1.0"
+description = "Alpha Factory v1.0 infrastructure (features, registry, risk governor, allocator, scheduler, drift)."
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "Alpha Factory" }]
+license = { text = "Proprietary" }
+dependencies = [
+  "duckdb>=1.0.0",
+  "pandas>=2.2",
+  "numpy>=1.26"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2",
+  "pytest-cov>=5.0",
+  "black>=24.0",
+  "ruff>=0.6"
+]
+plots = ["matplotlib>=3.8,<3.11"]
+docs = ["mkdocs>=1.6", "mkdocs-material>=9.5"]
+
+[project.urls]
+Homepage = "https://github.com/Lukee828/forex-cfd-pipeline"
+Issues = "https://github.com/Lukee828/forex-cfd-pipeline/issues"
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+select = ["E","F","I","UP"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-q"
+testpaths = ["tests"]
+
+[tool.hatch.build]
+exclude = [
+  "/.git",
+  "/.github",
+  "/.precommit_cache",
+  "/site",
+  "/build",
+  "/dist",
+  "/**/*.duckdb",
+  "/**/*.csv",
+  "/**/*.html"
+]
+

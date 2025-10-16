@@ -1,0 +1,1403 @@
+[
+  {
+    "path": "src/__init__.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/alpha_factory/__init__.py",
+    "has_cli": false,
+    "import_lines": [
+      "from .base import (",
+      "from .factors import sma_cross  # noqa: F401",
+      "from .factors import sma_slope  # noqa: F401",
+      "from .factors import rsi_thresh  # noqa: F401"
+    ]
+  },
+  {
+    "path": "src/alpha_factory/alpha_registry_ext_overrides_024.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import duckdb",
+      "from alpha_factory.alpha_registry import AlphaRegistry",
+      "import uuid",
+      "import json",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/alpha_factory/alpha_registry_ext.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from alpha_factory.alpha_registry import AlphaRegistry  # noqa: F401",
+      "import alpha_factory.alpha_registry_ext_overrides_024  # noqa: F401"
+    ]
+  },
+  {
+    "path": "src/alpha_factory/alpha_registry_schema_v025.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from pathlib import Path",
+      "import os",
+      "import duckdb"
+    ]
+  },
+  {
+    "path": "src/alpha_factory/alpha_registry.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from pathlib import Path",
+      "from typing import Any, Iterable",
+      "import json",
+      "import duckdb",
+      "import duckdb"
+    ]
+  },
+  {
+    "path": "src/alpha_factory/base.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass",
+      "from typing import Protocol, Iterable, Dict, Callable",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/alpha_factory/drift_dashboard.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from pathlib import Path",
+      "import matplotlib",
+      "import matplotlib.pyplot as plt",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/alpha_factory/registry_cli.py",
+    "has_cli": true,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import argparse",
+      "import json",
+      "import os",
+      "import duckdb",
+      "import alpha_factory.alpha_registry_schema_v025  # noqa: F401",
+      "from alpha_factory.alpha_registry import AlphaRegistry",
+      "import alpha_factory.alpha_registry_ext_overrides_024 as _ovr  # noqa: F401"
+    ]
+  },
+  {
+    "path": "src/alpha_factory/registry_db.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import json",
+      "import os",
+      "import sqlite3",
+      "from dataclasses import dataclass",
+      "from typing import Optional, Sequence, Tuple"
+    ]
+  },
+  {
+    "path": "src/alpha_factory/registry_tooling_v027.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from pathlib import Path",
+      "import duckdb",
+      "import pandas as pd",
+      "import alpha_factory.alpha_registry_ext_overrides_024  # noqa: F401",
+      "from alpha_factory.alpha_registry import AlphaRegistry  # noqa: F401"
+    ]
+  },
+  {
+    "path": "src/alpha_factory/registry_tooling_v028.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass",
+      "from typing import Iterable, Any",
+      "import csv",
+      "import json",
+      "import pathlib",
+      "from alpha_factory.alpha_registry import AlphaRegistry"
+    ]
+  },
+  {
+    "path": "src/alpha_factory/factors/__init__.py",
+    "has_cli": false,
+    "import_lines": [
+      "from . import sma_cross as sma_cross  # noqa: F401",
+      "from . import sma_slope as sma_slope  # noqa: F401",
+      "from . import rsi_thresh as rsi_thresh  # noqa: F401"
+    ]
+  },
+  {
+    "path": "src/alpha_factory/factors/_template.py",
+    "has_cli": false,
+    "import_lines": [
+      "from dataclasses import dataclass",
+      "import numpy as np",
+      "import pandas as pd",
+      "from ..base import Factor, FactorSpec, registry"
+    ]
+  },
+  {
+    "path": "src/alpha_factory/factors/rsi_thresh.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import numpy as np",
+      "import pandas as pd",
+      "from ..base import Factor",
+      "import numpy as np",
+      "import pandas as pd",
+      "from ..base import FactorSpec, registry"
+    ]
+  },
+  {
+    "path": "src/alpha_factory/factors/sma_cross.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import pandas as pd",
+      "from dataclasses import dataclass",
+      "from ..base import Factor",
+      "from ..base import FactorSpec, registry as AlphaRegistry"
+    ]
+  },
+  {
+    "path": "src/alpha_factory/factors/sma_slope.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import numpy as np",
+      "import pandas as pd",
+      "from ..base import Factor, FactorSpec, registry"
+    ]
+  },
+  {
+    "path": "src/analytics/__init__.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/analytics/corr_matrix.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass",
+      "from typing import List, Tuple, Dict",
+      "import numpy as np",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/analytics/dashboards.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import os as _os",
+      "import matplotlib",
+      "import io",
+      "import base64",
+      "from pathlib import Path",
+      "from typing import Optional",
+      "import numpy as np",
+      "import pandas as pd",
+      "import matplotlib.pyplot as plt",
+      "import matplotlib.pyplot as plt"
+    ]
+  },
+  {
+    "path": "src/analytics/redundancy.py",
+    "has_cli": false,
+    "import_lines": [
+      "import numpy as np",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/analytics/reports.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/backtest/__init__.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/backtest/api.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from typing import Any, Dict",
+      "from .engine import BacktestEngine as _BacktestEngine  # type: ignore",
+      "from .engine import Backtest as _Impl  # type: ignore",
+      "import pandas as pd",
+      "import numpy as np"
+    ]
+  },
+  {
+    "path": "src/backtest/cli.py",
+    "has_cli": true,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import argparse, json, os, pandas as pd",
+      "from src.data.dukascopy import BarSpec, get_bars",
+      "from src.strategies.mr import MeanReversion",
+      "from src.strategies.breakout import Breakout",
+      "from src.backtest.engine import run_backtest"
+    ]
+  },
+  {
+    "path": "src/backtest/data_feed.py",
+    "has_cli": false,
+    "import_lines": [
+      "import os",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/backtest/engine_loop.py",
+    "has_cli": false,
+    "import_lines": [
+      "import os",
+      "import numpy as np",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/backtest/engine.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass",
+      "from typing import Dict, Any, Optional",
+      "import numpy as np, pandas as pd",
+      "from src.runtime.risk_governed import GovernorParams, RiskGovernedSizer"
+    ]
+  },
+  {
+    "path": "src/backtest/event_queue.py",
+    "has_cli": false,
+    "import_lines": [
+      "from collections import deque",
+      "from typing import Deque, Generic, Optional, TypeVar"
+    ]
+  },
+  {
+    "path": "src/backtest/events.py",
+    "has_cli": false,
+    "import_lines": [
+      "import datetime",
+      "from dataclasses import dataclass",
+      "from typing import Dict, Literal"
+    ]
+  },
+  {
+    "path": "src/backtest/execution.py",
+    "has_cli": false,
+    "import_lines": [
+      "from dataclasses import dataclass",
+      "from typing import Dict",
+      "from .events import OrderEvent, FillEvent"
+    ]
+  },
+  {
+    "path": "src/backtest/feature_flags.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass, field",
+      "from typing import Dict"
+    ]
+  },
+  {
+    "path": "src/backtest/portfolio.py",
+    "has_cli": false,
+    "import_lines": [
+      "from dataclasses import dataclass, field",
+      "from typing import Dict",
+      "from .events import MarketEvent, SignalEvent, OrderEvent, FillEvent"
+    ]
+  },
+  {
+    "path": "src/backtest/runner_hooks.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from typing import Any, Tuple, Optional"
+    ]
+  },
+  {
+    "path": "src/backtest/strategies/ma_cross.py",
+    "has_cli": false,
+    "import_lines": [
+      "from typing import List, Dict, Optional",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/backtest/strategy/base.py",
+    "has_cli": false,
+    "import_lines": [
+      "from abc import ABC, abstractmethod",
+      "from typing import List",
+      "import pandas as pd",
+      "from ..events import SignalEvent  # re-export type hints if you wish"
+    ]
+  },
+  {
+    "path": "src/backtest/strategy/events.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/core/__init__.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/core/costs.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/core/flags.py",
+    "has_cli": false,
+    "import_lines": [
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/core/loader.py",
+    "has_cli": false,
+    "import_lines": [
+      "import pandas as pd",
+      "import pathlib"
+    ]
+  },
+  {
+    "path": "src/core/metrics.py",
+    "has_cli": false,
+    "import_lines": [
+      "import pandas as pd",
+      "import numpy as np"
+    ]
+  },
+  {
+    "path": "src/data/batch_ingest.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import pandas as pd",
+      "import pathlib",
+      "import re",
+      "from .dukascopy_downloader import _normalize, _resample, _save_parquet"
+    ]
+  },
+  {
+    "path": "src/data/dukascopy_downloader.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import pathlib",
+      "import pandas as pd",
+      "import pandas as pd",
+      "import dukascopy_python as duka  # pip name: dukascopy-python",
+      "import dukascopy as duka",
+      "import pandas as pd",
+      "import dukascopy_python as dpy",
+      "from dukascopy_python import instruments as inst"
+    ]
+  },
+  {
+    "path": "src/data/dukascopy.py",
+    "has_cli": false,
+    "import_lines": [
+      "from dataclasses import dataclass",
+      "from typing import Optional",
+      "import os",
+      "import re",
+      "import numpy as np",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/data/sqlite_store.py",
+    "has_cli": false,
+    "import_lines": [
+      "import sqlite3",
+      "from pathlib import Path",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/data/validate_library.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import pandas as pd",
+      "import pathlib",
+      "import json"
+    ]
+  },
+  {
+    "path": "src/datafeed/__init__.py",
+    "has_cli": false,
+    "import_lines": [
+      "from .base import PriceBar, PriceSource, to_df",
+      "from .csv_source import CsvPriceSource",
+      "from datafeed.yahoo_source import YahooPriceSource"
+    ]
+  },
+  {
+    "path": "src/datafeed/base.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass",
+      "from typing import Protocol, Iterable",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/datafeed/csv_source.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from pathlib import Path",
+      "import pandas as pd",
+      "from .base import PriceSource"
+    ]
+  },
+  {
+    "path": "src/datafeed/yahoo_source.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass",
+      "from typing import Callable, Optional, Iterable, Any",
+      "import pandas as pd",
+      "import yfinance as yf  # lazy import"
+    ]
+  },
+  {
+    "path": "src/exec/__init__.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/exec/aggregate.py",
+    "has_cli": false,
+    "import_lines": [
+      "from typing import List",
+      "from ..sleeves.base import OrderIntent"
+    ]
+  },
+  {
+    "path": "src/exec/ascii_print_patch.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/exec/backtest_event.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import os",
+      "from src.backtest.data_feed import ParquetDataFeed",
+      "from src.backtest.strategies.ma_cross import MACrossStrategy",
+      "from src.backtest.engine_loop import EngineLoop"
+    ]
+  },
+  {
+    "path": "src/exec/backtest_pnl_demo.py",
+    "has_cli": true,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import argparse",
+      "from pathlib import Path",
+      "import pandas as pd",
+      "import sys",
+      "import yaml",
+      "import glob",
+      "from typing import Dict, List",
+      "from src.backtest.engine import (",
+      "from src.signals.tf import TrendFollowing",
+      "from src.signals.mr import MeanReversion",
+      "from src.signals.vol import VolCarry"
+    ]
+  },
+  {
+    "path": "src/exec/backtest_tsmom_demo.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import yaml",
+      "import pandas as pd",
+      "from ..core.loader import load_parquet",
+      "from ..sleeves.ts_mom import signals as ts_signals",
+      "from ..exec.aggregate import to_net"
+    ]
+  },
+  {
+    "path": "src/exec/backtest.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "from pathlib import Path",
+      "import sys",
+      "import yaml",
+      "import pandas as pd",
+      "import numpy as np",
+      "from datetime import datetime, UTC",
+      "import matplotlib",
+      "import matplotlib.pyplot as plt",
+      "from backtest.feature_flags import RuntimeState  # noqa: E402",
+      "from backtest.runner_hooks import log_flag_states  # noqa: E402"
+    ]
+  },
+  {
+    "path": "src/exec/backtester_ascii_patch.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/exec/check_data_health.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import pandas as pd",
+      "from pathlib import Path"
+    ]
+  },
+  {
+    "path": "src/exec/daily_run.py",
+    "has_cli": true,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import argparse",
+      "import sys",
+      "import subprocess",
+      "from pathlib import Path",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/exec/export_signals.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import pandas as pd",
+      "import numpy as np",
+      "import yaml",
+      "import os",
+      "from pathlib import Path",
+      "from ..core.loader import load_parquet",
+      "from ..sleeves.ts_mom import signals as ts_signals_trend",
+      "from ..sleeves.xsec_mom_simple import signals_monthly as xsec_monthly",
+      "from ..sleeves.mr_ma20_simple import signals_daily as mr_daily",
+      "import pathlib",
+      "import pathlib"
+    ]
+  },
+  {
+    "path": "src/exec/freeze_params.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import json",
+      "from pathlib import Path",
+      "import pandas as pd",
+      "import yaml"
+    ]
+  },
+  {
+    "path": "src/exec/ingest_daily.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "from pathlib import Path",
+      "import pandas as pd",
+      "from src.data.sqlite_store import OHLCVStore"
+    ]
+  },
+  {
+    "path": "src/exec/list_data.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import pandas as pd",
+      "from pathlib import Path"
+    ]
+  },
+  {
+    "path": "src/exec/ma_grid.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "from pathlib import Path",
+      "import numpy as np",
+      "import pandas as pd",
+      "from src.backtest.data_feed import ParquetDataFeed",
+      "from src.backtest.engine_loop import EngineLoop",
+      "from src.backtest.strategies.ma_cross import MACrossStrategy",
+      "import matplotlib",
+      "import matplotlib.pyplot as plt"
+    ]
+  },
+  {
+    "path": "src/exec/make_monthly_summary.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import pandas as pd",
+      "from pathlib import Path"
+    ]
+  },
+  {
+    "path": "src/exec/make_orders.py",
+    "has_cli": true,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import argparse",
+      "import sys",
+      "from pathlib import Path",
+      "from datetime import datetime, timezone",
+      "from typing import Optional",
+      "import pandas as pd",
+      "import MetaTrader5 as mt5  # type: ignore"
+    ]
+  },
+  {
+    "path": "src/exec/make_report_html.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import pandas as pd",
+      "import numpy as np",
+      "import math",
+      "import plotly.graph_objects as go",
+      "import plotly.express as px",
+      "from pathlib import Path",
+      "from datetime import datetime",
+      "from pathlib import Path as _P",
+      "import os as _os",
+      "from plotly.io import to_html as _to_html",
+      "from plotly.io import to_html"
+    ]
+  },
+  {
+    "path": "src/exec/metrics_summary.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import pandas as pd",
+      "import numpy as np",
+      "import math"
+    ]
+  },
+  {
+    "path": "src/exec/paper_log.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import pandas as pd",
+      "from pathlib import Path",
+      "from datetime import datetime"
+    ]
+  },
+  {
+    "path": "src/exec/pareto_summary.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import pandas as pd",
+      "import numpy as np",
+      "from pathlib import Path"
+    ]
+  },
+  {
+    "path": "src/exec/publish_mt5.py",
+    "has_cli": true,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import os",
+      "import sys",
+      "import argparse",
+      "from pathlib import Path",
+      "from datetime import datetime",
+      "from decimal import Decimal, ROUND_FLOOR",
+      "from typing import List, Dict, Any, Optional",
+      "import pandas as pd",
+      "import MetaTrader5 as mt5"
+    ]
+  },
+  {
+    "path": "src/exec/reconcile.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import pandas as pd",
+      "from pathlib import Path"
+    ]
+  },
+  {
+    "path": "src/exec/refresh_prices.py",
+    "has_cli": true,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import argparse",
+      "import subprocess",
+      "import sys",
+      "import os",
+      "from pathlib import Path",
+      "from datetime import datetime, timezone",
+      "from concurrent.futures import ThreadPoolExecutor, as_completed",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/exec/resample_1h_to_1d.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "from pathlib import Path",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/exec/run_all.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import subprocess",
+      "import sys"
+    ]
+  },
+  {
+    "path": "src/exec/sweep_robustness.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import itertools",
+      "import subprocess",
+      "import sys",
+      "import math",
+      "import time",
+      "import os",
+      "from datetime import datetime",
+      "from pathlib import Path",
+      "import pandas as pd",
+      "import numpy as np",
+      "from pathlib import Path as _P",
+      "import os as _os"
+    ]
+  },
+  {
+    "path": "src/exec/walkforward.py",
+    "has_cli": true,
+    "import_lines": [
+      "import argparse",
+      "import subprocess",
+      "import sys",
+      "import json",
+      "import math",
+      "import re",
+      "from pathlib import Path",
+      "from datetime import datetime",
+      "import pandas as pd",
+      "import numpy as np"
+    ]
+  },
+  {
+    "path": "src/execution/demo.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import csv, os, time",
+      "from dataclasses import dataclass",
+      "from typing import Dict, Any"
+    ]
+  },
+  {
+    "path": "src/factors/structure_factors.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass",
+      "import pandas as pd",
+      "from structure.zigzag import zigzag, ZigZagParams",
+      "from structure.overbalance import overbalance",
+      "from structure.vol_state import classify_vol_state"
+    ]
+  },
+  {
+    "path": "src/feature/__init__.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/feature/engine_adapter.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from typing import Any",
+      "from src.runtime.switches import feature_engine",
+      "import polars as _  # noqa: F401",
+      "import polars as pl",
+      "import pandas as pd",
+      "import polars as pl"
+    ]
+  },
+  {
+    "path": "src/feature/feature_store.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import json",
+      "import hashlib",
+      "import json as _json",
+      "import hashlib as _hashlib",
+      "import os",
+      "import pickle",
+      "from pathlib import Path",
+      "from typing import Any, Iterable, Optional",
+      "from pathlib import Path as _P",
+      "from pathlib import Path as _P",
+      "import pickle as _pickle",
+      "import pandas as _pd",
+      "import json as _json",
+      "from pathlib import Path as _P",
+      "import pickle as _pickle",
+      "from pathlib import Path as _P",
+      "import pickle as _pickle",
+      "from pathlib import Path as _P",
+      "from pathlib import Path as _P",
+      "from pathlib import Path as _P",
+      "import pickle as _pickle",
+      "from pathlib import Path as _P",
+      "import pandas as _pd",
+      "import pandas as _pd",
+      "import pandas as _pd",
+      "import pandas as _pd"
+    ]
+  },
+  {
+    "path": "src/infra/__init__.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/infra/_compat_risk.py",
+    "has_cli": false,
+    "import_lines": [
+      "from typing import Any, Optional",
+      "from src.risk.spread_guard import SpreadGuardConfig  # type: ignore"
+    ]
+  },
+  {
+    "path": "src/infra/cli_export.py",
+    "has_cli": true,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import argparse",
+      "import os",
+      "from pathlib import Path",
+      "from datetime import datetime, timezone",
+      "import duckdb",
+      "from src.infra.export_features import export_risk_snapshot, RiskInputs"
+    ]
+  },
+  {
+    "path": "src/infra/drift_dashboard.py",
+    "has_cli": true,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import os, datetime as dt",
+      "from pathlib import Path",
+      "from typing import List",
+      "import pandas as pd",
+      "import numpy as np",
+      "import matplotlib.pyplot as plt"
+    ]
+  },
+  {
+    "path": "src/infra/export_features.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass",
+      "from datetime import datetime, timezone",
+      "from typing import Any, Dict, Optional",
+      "import pandas as pd",
+      "from src.risk.spread_guard import SpreadGuardConfig, check_spread_ok  # type: ignore",
+      "from ._compat_risk import new_spread_guard_config",
+      "from src.risk.vol_state import VolStateMachine, infer_vol_regime  # type: ignore",
+      "from src.risk.risk_governor import RiskGovernor, RiskGovernorConfig  # type: ignore",
+      "import duckdb  # type: ignore"
+    ]
+  },
+  {
+    "path": "src/infra/export_weights.py",
+    "has_cli": true,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import os, glob, datetime as dt",
+      "import pandas as pd",
+      "from typing import Optional",
+      "from .meta_allocator import MetaAllocator, MetaAllocatorConfig",
+      "import pyarrow as _pa  # noqa: F401"
+    ]
+  },
+  {
+    "path": "src/infra/feature_store.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from pathlib import Path",
+      "from typing import Optional, Iterable, Any, Dict",
+      "import duckdb",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/infra/meta_allocator.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass",
+      "from typing import Optional, Dict",
+      "import math",
+      "import numpy as np",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/infra/registry.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import os",
+      "from .feature_store import FeatureStore"
+    ]
+  },
+  {
+    "path": "src/ops/__init__.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/ops/monthly.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/ops/weekly.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/qa/regression_suite.py",
+    "has_cli": true,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import os, csv, json, datetime as dt",
+      "from dataclasses import dataclass, asdict",
+      "from typing import Dict, List, Any, Optional",
+      "import numpy as np",
+      "import pandas as pd  # optional at runtime",
+      "from src.risk.risk_governor import RiskGovernor, RiskGovernorConfig",
+      "import pyarrow  # noqa: F401",
+      "import pandas as pd2"
+    ]
+  },
+  {
+    "path": "src/regime/__init__.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/regime/switchbox.py",
+    "has_cli": false,
+    "import_lines": [
+      "from dataclasses import dataclass",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/registry/__init__.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/registry/alpha_registry.py",
+    "has_cli": false,
+    "import_lines": [
+      "from alpha_factory.alpha_registry import AlphaRegistry"
+    ]
+  },
+  {
+    "path": "src/research/wfo.py",
+    "has_cli": false,
+    "import_lines": [
+      "import numpy as np",
+      "import pandas as pd",
+      "from dataclasses import dataclass"
+    ]
+  },
+  {
+    "path": "src/risk/__init__.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/risk/be_gate.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass"
+    ]
+  },
+  {
+    "path": "src/risk/guards.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass, field",
+      "from datetime import datetime, timedelta",
+      "from typing import Dict, Optional"
+    ]
+  },
+  {
+    "path": "src/risk/overlay.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass",
+      "from datetime import datetime",
+      "from typing import Callable, Dict, Optional, Tuple"
+    ]
+  },
+  {
+    "path": "src/risk/positioning.py",
+    "has_cli": false,
+    "import_lines": [
+      "import numpy as np",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/risk/risk_governor.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass",
+      "from typing import Tuple, Optional, Dict, List",
+      "import numpy as np"
+    ]
+  },
+  {
+    "path": "src/risk/spread_guard.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass",
+      "from typing import Optional"
+    ]
+  },
+  {
+    "path": "src/risk/time_stop.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass",
+      "from datetime import datetime, timezone",
+      "from datetime import datetime, timedelta, timezone"
+    ]
+  },
+  {
+    "path": "src/risk/vol_state.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass",
+      "from typing import Literal, Optional",
+      "import numpy as np",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/runtime/governor_integration.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import os",
+      "from dataclasses import dataclass",
+      "from typing import Optional, Tuple, Dict",
+      "from src.runtime.risk_governed import GovernorParams, RiskGovernedSizer"
+    ]
+  },
+  {
+    "path": "src/runtime/risk_governed.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass",
+      "from typing import Optional, Tuple, Dict, Iterable, Iterator, List",
+      "import numpy as np",
+      "from src.risk.risk_governor import RiskGovernor, RiskGovernorConfig"
+    ]
+  },
+  {
+    "path": "src/runtime/switches.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import os"
+    ]
+  },
+  {
+    "path": "src/selection/__init__.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/selection/selector.py",
+    "has_cli": false,
+    "import_lines": [
+      "from dataclasses import dataclass",
+      "from typing import List, Dict"
+    ]
+  },
+  {
+    "path": "src/sleeves/__init__.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/sleeves/base.py",
+    "has_cli": false,
+    "import_lines": [
+      "import datetime",
+      "from dataclasses import dataclass",
+      "from typing import Optional, Dict"
+    ]
+  },
+  {
+    "path": "src/sleeves/carry.py",
+    "has_cli": false,
+    "import_lines": [
+      "from .base import OrderIntent",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/sleeves/mr_ma20_simple.py",
+    "has_cli": false,
+    "import_lines": [
+      "import pandas as pd",
+      "import numpy as np"
+    ]
+  },
+  {
+    "path": "src/sleeves/mr_vwap.py",
+    "has_cli": false,
+    "import_lines": [
+      "import pandas as pd",
+      "from .base import OrderIntent"
+    ]
+  },
+  {
+    "path": "src/sleeves/orb_nr7.py",
+    "has_cli": false,
+    "import_lines": [
+      "import pandas as pd",
+      "from .base import OrderIntent"
+    ]
+  },
+  {
+    "path": "src/sleeves/seasonality.py",
+    "has_cli": false,
+    "import_lines": [
+      "import pandas as pd",
+      "from .base import OrderIntent"
+    ]
+  },
+  {
+    "path": "src/sleeves/ts_mom.py",
+    "has_cli": false,
+    "import_lines": [
+      "import pandas as pd",
+      "from .base import OrderIntent"
+    ]
+  },
+  {
+    "path": "src/sleeves/vol_carry_xsec.py",
+    "has_cli": false,
+    "import_lines": [
+      "import pandas as pd",
+      "import numpy as np"
+    ]
+  },
+  {
+    "path": "src/sleeves/xsec_mom_simple.py",
+    "has_cli": false,
+    "import_lines": [
+      "import pandas as pd",
+      "import numpy as np"
+    ]
+  },
+  {
+    "path": "src/sleeves/xsec_mom.py",
+    "has_cli": false,
+    "import_lines": [
+      "import pandas as pd",
+      "from .base import OrderIntent"
+    ]
+  },
+  {
+    "path": "src/store/feature_store.py",
+    "has_cli": false,
+    "import_lines": [
+      "from typing import Any, Iterable, Mapping",
+      "import duckdb",
+      "import pandas as pd",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/strategies/api.py",
+    "has_cli": false,
+    "import_lines": [
+      "from typing import Any",
+      "import pandas as pd, numpy as np"
+    ]
+  },
+  {
+    "path": "src/strategies/base.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass",
+      "import pandas as pd",
+      "from typing import Dict, Any"
+    ]
+  },
+  {
+    "path": "src/strategies/breakout.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import pandas as pd",
+      "from dataclasses import dataclass",
+      "from .base import Strategy, StrategyResult"
+    ]
+  },
+  {
+    "path": "src/strategies/mr.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import pandas as pd",
+      "from dataclasses import dataclass",
+      "from .base import Strategy, StrategyResult"
+    ]
+  },
+  {
+    "path": "src/structure/__init__.py",
+    "has_cli": false,
+    "import_lines": [
+      "from .zigzag import zigzag, ZigZagParams",
+      "from .overbalance import overbalance",
+      "from .vol_state import classify_vol_state"
+    ]
+  },
+  {
+    "path": "src/structure/overbalance.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/structure/vol_state.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import numpy as np",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/structure/zigzag.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "from dataclasses import dataclass",
+      "import numpy as np",
+      "import pandas as pd"
+    ]
+  },
+  {
+    "path": "src/utils/__init__.py",
+    "has_cli": false,
+    "import_lines": []
+  },
+  {
+    "path": "src/utils/config_loader.py",
+    "has_cli": false,
+    "import_lines": [
+      "import os",
+      "import re",
+      "import yaml"
+    ]
+  },
+  {
+    "path": "src/utils/log.py",
+    "has_cli": false,
+    "import_lines": [
+      "from datetime import datetime"
+    ]
+  },
+  {
+    "path": "src/utils/notify_slack.py",
+    "has_cli": false,
+    "import_lines": [
+      "import os",
+      "import json",
+      "import urllib.request"
+    ]
+  },
+  {
+    "path": "src/utils/notify.py",
+    "has_cli": false,
+    "import_lines": [
+      "import smtplib",
+      "import ssl",
+      "import os",
+      "from email.mime.text import MIMEText",
+      "from email.mime.multipart import MIMEMultipart"
+    ]
+  },
+  {
+    "path": "src/utils/rolling.py",
+    "has_cli": false,
+    "import_lines": [
+      "from __future__ import annotations",
+      "import os",
+      "import numpy as np",
+      "import numba  # type: ignore"
+    ]
+  }
+]

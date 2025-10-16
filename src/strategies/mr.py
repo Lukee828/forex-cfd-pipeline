@@ -12,8 +12,9 @@ class MeanReversion(Strategy):
     def signals(self, df: pd.DataFrame) -> StrategyResult:
         c = df["close"].astype(float)
         ma = c.rolling(self.lookback).mean()
-        sd = c.rolling(self.lookback).std().replace(0, pd.NA).fillna(method="bfill").fillna(method="ffill")
+        sd = c.rolling(self.lookback).std().replace(0, pd.NA).bfill().ffill()
         z = (c - ma) / sd
         sig = (z * -1.0).clip(-3,3)
         out = sig.where(sig.abs() >= self.z, 0.0).apply(lambda x: 1.0 if x>0 else (-1.0 if x<0 else 0.0))
         return StrategyResult(out.fillna(0.0), {"ma": ma})
+
