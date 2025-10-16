@@ -1,14 +1,6 @@
-env:
-  AF_SKIP_MT5: '1'
 name: Tests (pytest)
 on:
   pull_request:
-      paths:
-        - alpha_factory/**
-        - tests/**
-        - tools/**
-        - configs/**
-        - mt5/**
   workflow_dispatch:
 
 
@@ -27,4 +19,3 @@ jobs:
           pip install pytest pytest-cov
       - name: Run pytest
         run: pytest --maxfail=5 --disable-warnings -q --cov=src
-
