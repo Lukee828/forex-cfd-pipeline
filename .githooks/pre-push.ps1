@@ -82,3 +82,18 @@ try {
 } catch {
   Write-Warning "[hook] Could not auto-commit pre-commit fixes: \"
 }
+
+# --- Autofix: stage & commit pre-commit changes (BEGIN) ---
+try {
+  \ = git status --porcelain
+  if (-not [string]::IsNullOrWhiteSpace(\)) {
+    git add -A | Out-Null
+    git commit -m "chore(pre-commit): apply EOF/trailing whitespace fixes" | Out-Null
+    Write-Host "[hook] Committed pre-commit autofixes." -ForegroundColor DarkGray
+  } else {
+    Write-Host "[hook] No pre-commit changes." -ForegroundColor DarkGray
+  }
+} catch {
+  Write-Warning "[hook] Could not auto-commit pre-commit fixes: \"
+}
+# --- Autofix: stage & commit pre-commit changes (END) ---
