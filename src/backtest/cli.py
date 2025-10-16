@@ -13,7 +13,7 @@ def main():
     p.add_argument("--end", default="2024-01-31")
     p.add_argument("--strategy", choices=["mr","breakout"], default="mr")
     args = p.parse_args()
-    spec = BarSpec(pair=args.pair, timeframe=args.tf, start=args.start, end=args.end)
+    spec = BarSpec(args.pair, args.tf, args.start, args.end)
     df = get_bars(spec)
     strat = MeanReversion() if args.strategy=="mr" else Breakout()
     sig = strat.signals(df).signals
@@ -26,3 +26,5 @@ def main():
 
 if __name__=="__main__":
     main()
+
+
