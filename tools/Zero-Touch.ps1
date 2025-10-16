@@ -1,3 +1,25 @@
+function Try-Dispatch {
+  param(
+    [Parameter(Mandatory)] [string] $Workflow,   # e.g. ".github/workflows/lint.yml"
+    [Parameter(Mandatory)] [string] $Ref         # branch or sha
+  )
+  if ($env:GIT_RD -ne '1') {
+    Write-Host "[ZT] Remote dispatch disabled (GIT_RD != 1)" -ForegroundColor DarkGray
+    return
+  }
+  try {
+    # Only run if workflow declares 'workflow_dispatch'
+    $view = (& gh workflow view $Workflow --yaml 2>$null)
+    if (-not $view -or $view -notmatch '(?m)^\s*workflow_dispatch:\s*$') {
+      Write-Host "[ZT] Skipping '$Workflow' (no workflow_dispatch)" -ForegroundColor DarkGray
+      return
+    }
+    $null = & gh workflow run $Workflow --ref $Ref 2>$null
+    Write-Host "[ZT] Dispatched $Workflow on $Ref" -ForegroundColor DarkGray
+  } catch {
+    Write-Host "[ZT] Quietly skipped dispatch for '$Workflow' ($($_.Exception.Message))" -ForegroundColor DarkGray
+  }
+}
 #Requires -Version 7
 [CmdletBinding()]
 param(
