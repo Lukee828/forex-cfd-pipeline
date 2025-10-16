@@ -9,6 +9,10 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
+  - name: Export PYTHONPATH
+    shell: bash
+    run: |
+      echo "PYTHONPATH=$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
@@ -25,6 +29,7 @@ jobs:
       echo "PYTHONPATH=$GITHUB_WORKSPACE:$GITHUB_WORKSPACE/src" >> $GITHUB_ENV
 
         run: pytest -q --maxfail=1 --disable-warnings tests/ci_smoke_test.py
+
 
 
 
