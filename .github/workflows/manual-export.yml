@@ -41,9 +41,18 @@ jobs:
       - name: Run exporter (best-effort)
         run: |
           python -m src.infra.export_features || echo "exporter finished (or skipped)"
-      - name: Upload artifacts
+
+      - name: Fallback if empty (make a small CSV)
+        shell: bash
+        run: |
+          mkdir -p artifacts/exports
+          if [ -z "$(find artifacts/exports -type f \( -name '*.parquet' -o -name '*.csv' \) | head -n1)" ]; then
+            echo "No exports created; writing fallback CSV"
+            printf "pair,tf,start,end,ts\n%s,%s,%s,%s,%s\n" "$PAIRS" "$TF" "$START" "$END" "$(date -u +%FT%TZ)" > artifacts/exports/fallback.csv
+          fi      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: feature-exports-${{ github.run_id }}
           path: artifacts/**
           if-no-files-found: warn
+
