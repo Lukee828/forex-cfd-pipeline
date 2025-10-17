@@ -1,58 +1,71 @@
 name: Manual Export
+
 on:
   workflow_dispatch:
     inputs:
       pairs:
-        description: "Comma-separated pairs (e.g. EURUSD,GBPUSD,USDJPY)"
+        description: "Comma separated pairs"
+        required: false
         default: "EURUSD,GBPUSD,USDJPY"
       tf:
         description: "Timeframe"
+        required: false
         default: "H1"
       start:
         description: "Start date (YYYY-MM-DD)"
+        required: false
         default: "2024-01-01"
       end:
         description: "End date (YYYY-MM-DD)"
+        required: false
         default: "2024-01-10"
       upload_to_s3:
         description: "Upload exports to S3?"
-        type: boolean
-        default: false
+        required: false
+        default: "false"
 
 jobs:
   export:
     runs-on: ubuntu-latest
     env:
-      PYTHONPATH: '${{ github.workspace }}:${{ github.workspace }}/src'
-      PAIRS: '${{ inputs.pairs }}'
-      TF: '${{ inputs.tf }}'
-      START: '${{ inputs.start }}'
-      END: '${{ inputs.end }}'
-      UPLOAD_TO_S3: '${{ inputs.upload_to_s3 }}'
+      PYTHONPATH: "${{ github.workspace }}:${{ github.workspace }}/src"
+      PAIRS: "${{ inputs.pairs }}"
+      TF: "${{ inputs.tf }}"
+      START: "${{ inputs.start }}"
+      END: "${{ inputs.end }}"
+      UPLOAD_TO_S3: "${{ inputs.upload_to_s3 }}"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
+
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt || true
+
       - name: Run exporter (best-effort)
         run: |
           python -m src.infra.export_features || echo "exporter finished (or skipped)"
 
-      - name: Fallback if empty (make a small CSV)
+      - name: Ensure artifacts/exports exists
+        run: mkdir -p artifacts/exports
+
+      - name: Fallback if empty (make minimal CSV)
         shell: bash
         run: |
-          mkdir -p artifacts/exports
-          if [ -z "$(find artifacts/exports -type f \( -name '*.parquet' -o -name '*.csv' \) | head -n1)" ]; then
+          if [ -z "$(find artifacts/exports -type f \( -name '*.parquet' -o -name '*.csv' \) -print -quit)" ]; then
             echo "No exports created; writing fallback CSV"
-            printf "pair,tf,start,end,ts\n%s,%s,%s,%s,%s\n" "$PAIRS" "$TF" "$START" "$END" "$(date -u +%FT%TZ)" > artifacts/exports/fallback.csv
-          fi      - name: Upload artifacts
+            echo "pair,tf,start,end,ts" > artifacts/exports/fallback.csv
+            echo "$PAIRS,$TF,$START,$END,$(date -u +%FT%TZ)" >> artifacts/exports/fallback.csv
+          fi
+
+      - name: Upload artifacts (exports + any other artifacts)
         uses: actions/upload-artifact@v4
         with:
           name: feature-exports-${{ github.run_id }}
-          path: artifacts/**
+          path: |
+            artifacts/exports/**
+            artifacts/**
           if-no-files-found: warn
-
