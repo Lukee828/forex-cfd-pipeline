@@ -1,3 +1,4 @@
+$env:PYTHONPATH = "$PWD;$PWD/src"
 $ErrorActionPreference = "Stop"
 $python = ".\.venv\Scripts\python.exe"
 

@@ -1,0 +1,12 @@
+- name: Upload drift artifacts to S3
+  if: ${{ env.AWS_ACCESS_KEY_ID && env.AWS_SECRET_ACCESS_KEY && env.S3_BUCKET }}
+  run: |
+    set -e
+    aws s3 cp artifacts/ "s3://${S3_BUCKET}/artifacts/${GITHUB_RUN_ID}/" --recursive \
+      --exclude "*" \
+      --include "drift_dashboard.html" \
+      --include "drift_dashboard.png" \
+      --include "drift_summary.csv" \
+      --include "weights-*.parquet" \
+      --include "features-*.parquet" \
+      --acl bucket-owner-full-control

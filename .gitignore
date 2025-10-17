@@ -36,3 +36,9 @@ data/
 *.parquet
 *.duckdb
 *.db
+
+# Generated artifacts
+artifacts/
+
+artifacts/
+*.parquet

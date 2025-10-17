@@ -1,0 +1,15 @@
+function Try-Dispatch {
+  param([Parameter(Mandatory)][string], [Parameter(Mandatory)][string])
+  if ($env:GIT_RD -ne '1') { Write-Host "[ZT] Remote dispatch disabled (GIT_RD != 1)" -ForegroundColor DarkGray; return }
+  try {
+    $view = (& gh workflow view $Workflow --yaml 2>$null)
+    if (-not $view -or $view -notmatch '(?m)^\s*workflow_dispatch:\s*$') {
+      Write-Host "[ZT] Skipping '$Workflow' (no workflow_dispatch)" -ForegroundColor DarkGray
+      return
+    }
+     = & gh workflow run $Workflow --ref $Ref 2>$null
+    Write-Host "[ZT] Dispatched $Workflow on $Ref" -ForegroundColor DarkGray
+  } catch {
+    Write-Host "[ZT] Quietly skipped dispatch for '$Workflow' ()" -ForegroundColor DarkGray
+  }
+}

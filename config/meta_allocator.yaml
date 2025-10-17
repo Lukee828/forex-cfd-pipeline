@@ -1,0 +1,10 @@
+# Meta Allocator defaults
+use_bayesian: false
+half_life: 10
+min_weight: 0.0
+max_weight: 1.0
+normalize: true
+include_dd: true
+include_vol: false
+target_vol_annual: 0.20
+trading_days: 252

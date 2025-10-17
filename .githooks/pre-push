@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# minimal shim → invoke PowerShell 7 hook
+if command -v pwsh >/dev/null 2>&1; then
+  pwsh -NoProfile -ExecutionPolicy Bypass -File "$(git rev-parse --show-toplevel)/.githooks/pre-push.ps1" "$@"
+else
+  echo "[pre-push] pwsh not found"; exit 0
+fi
