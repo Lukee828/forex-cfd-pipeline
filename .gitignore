@@ -36,3 +36,6 @@ data/
 *.parquet
 *.duckdb
 *.db
+artifacts_download/
+artifacts/
+
