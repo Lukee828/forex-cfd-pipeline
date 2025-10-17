@@ -40,3 +40,5 @@ data/
 # Generated artifacts
 artifacts/
 
+artifacts/
+*.parquet
