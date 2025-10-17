@@ -1,6 +1,7 @@
 name: Nightly
 
 on:
+  workflow_dispatch:
   schedule:
     - cron: "0 2 * * *"
   workflow_dispatch:
@@ -52,4 +53,5 @@ jobs:
           name: feature-exports-${{ github.run_id }}
           path: |
             artifacts/*.parquet
+
 
