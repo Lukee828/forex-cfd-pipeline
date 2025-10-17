@@ -60,6 +60,26 @@ jobs:
             echo "pair,tf,start,end,ts" > artifacts/exports/fallback.csv
             echo "$PAIRS,$TF,$START,$END,$(date -u +%FT%TZ)" >> artifacts/exports/fallback.csv
           fi
+      - name: Fallback if empty (make minimal CSV)
+        shell: pwsh
+        run: |
+          $dir = "artifacts/exports"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          $files = Get-ChildItem -Path $dir -Include *.csv,*.parquet -Recurse -ErrorAction SilentlyContinue
+          if (-not $files) {
+            Write-Host "No exports created; writing fallback CSV"
+            $pairs  = $env:PAIRS -split ','
+            $tf     = $env:TF
+            $start  = $env:START
+            $end    = $env:END
+            $ts     = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+            $out    = Join-Path $dir 'fallback.csv'
+            "pair,tf,start,end,ts" | Out-File $out -Encoding UTF8
+            foreach ($p in $pairs) {
+              $p = $p.Trim()
+              "$p,$tf,$start,$end,$ts" | Out-File $out -Append -Encoding UTF8
+            }
+          }
 
       - name: Upload artifacts (exports + any other artifacts)
         uses: actions/upload-artifact@v4
@@ -69,3 +89,4 @@ jobs:
             artifacts/exports/**
             artifacts/**
           if-no-files-found: warn
+
