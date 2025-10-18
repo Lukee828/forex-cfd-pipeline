@@ -1,3 +1,5 @@
+[![CI](https://github.com/Lukee828/forex-cfd-pipeline/actions/workflows/ci.yml/badge.svg?branch=chore/compat-alpha-factory-027)](https://github.com/Lukee828/forex-cfd-pipeline/actions/workflows/ci.yml)
+
 # Forex CFD Pipeline
 
 > Lean, testable research sandbox with an **Alpha Factory** and guardrails.
@@ -25,3 +27,4 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\Run-FeatureStoreDemo.ps1 -
 ```
 
 Ping: 2025-10-10T09:48:30.8212332+02:00
+
