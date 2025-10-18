@@ -1,5 +1,14 @@
+from __future__ import annotations
 from typing import List
 from ..sleeves.base import OrderIntent
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
 
 
 def to_net(intents: List[OrderIntent]) -> List[OrderIntent]:

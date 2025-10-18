@@ -1,3 +1,22 @@
+from __future__ import annotations
+import os
+import sys
+import argparse
+from pathlib import Path
+from datetime import datetime
+from decimal import Decimal, ROUND_FLOOR
+from typing import List, Dict, Any, Optional
+import pandas as pd
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -10,26 +29,6 @@ Publish orders to MetaTrader 5.
 - Chooses fill modes intelligently (IOC for FX/metals, RETURN for indices), but honors CSV fill_mode when set.
 - Dry run prints an accurate post-rounding preview table (what would be sent).
 """
-
-from __future__ import annotations
-
-import os
-import sys
-import argparse
-from pathlib import Path
-from datetime import datetime
-from decimal import Decimal, ROUND_FLOOR
-from typing import List, Dict, Any, Optional
-
-import pandas as pd
-
-try:
-    import MetaTrader5 as mt5
-except Exception as ex:  # pragma: no cover
-    print(f"ERROR: failed to import MetaTrader5: {ex}", file=sys.stderr)
-    sys.exit(2)
-
-
 # -----------------------------
 # Helpers
 # -----------------------------
@@ -346,3 +345,10 @@ def main(argv: Optional[List[str]] = None) -> None:
 
 if __name__ == "__main__":
     main()
+try:
+    import MetaTrader5 as mt5  # type: ignore
+except Exception as ex:  # pragma: no cover
+    import sys
+
+    print(f"ERROR: failed to import MetaTrader5: {ex}", file=sys.stderr)
+    mt5 = None

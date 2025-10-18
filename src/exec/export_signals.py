@@ -1,3 +1,5 @@
+from __future__ import annotations
+import pathlib
 import argparse
 import pandas as pd
 import numpy as np
@@ -10,6 +12,14 @@ from ..sleeves.xsec_mom_simple import signals_monthly as xsec_monthly
 from ..sleeves.mr_ma20_simple import signals_daily as mr_daily
 
 
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
 def _load_many(paths):
     dfs = {}
     for p in paths:
@@ -20,7 +30,6 @@ def _load_many(paths):
             df.index = df.index.tz_localize("UTC")
         else:
             df.index = df.index.tz_convert("UTC")
-        import pathlib
 
         sym = (
             df["symbol"].dropna().iloc[0]
@@ -95,7 +104,6 @@ def main():
     if args.paths:
         paths.extend([p.strip() for p in args.paths.split(",") if p.strip()])
     if args.folder:
-        import pathlib
 
         paths.extend([str(p) for p in pathlib.Path(args.folder).glob("*.parquet")])
     if not paths:

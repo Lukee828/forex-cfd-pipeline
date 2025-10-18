@@ -192,7 +192,9 @@ def alerts(
     if metric not in df.columns and "metrics" in df.columns:
         try:
             df[metric] = df["metrics"].map(
-                lambda x: duckdb.sql(f"SELECT TRY_CAST(json_extract(?::JSON, '$.{metric}') AS DOUBLE)", [x]).fetchone()[0]
+                lambda x: duckdb.sql(
+                    f"SELECT TRY_CAST(json_extract(?::JSON, '$.{metric}') AS DOUBLE)", [x]
+                ).fetchone()[0]
             )
         except Exception:
             pass
@@ -244,7 +246,6 @@ def import_csv_to_alphas(reg, csv_path: str) -> int:
 
 def html_report(reg, *, metric: str, out_html: str) -> str:
     """Write a single HTML page with Top-10 and Summary tables for the metric."""
-    import duckdb
     import pandas as pd
     from pathlib import Path
 
@@ -277,8 +278,13 @@ def html_report(reg, *, metric: str, out_html: str) -> str:
 
         names = set()
         try:
-            names |= {r[0].lower() for r in con.execute("SELECT name FROM duckdb_tables()").fetchall()}
-            names |= {r[0].lower() for r in con.execute("SELECT table_name FROM information_schema.views").fetchall()}
+            names |= {
+                r[0].lower() for r in con.execute("SELECT name FROM duckdb_tables()").fetchall()
+            }
+            names |= {
+                r[0].lower()
+                for r in con.execute("SELECT table_name FROM information_schema.views").fetchall()
+            }
         except Exception:
             pass
 
@@ -286,8 +292,13 @@ def html_report(reg, *, metric: str, out_html: str) -> str:
 
         if rel is None:
             import pandas as pd
-            top = pd.DataFrame(columns=["alpha_id","run_id","timestamp","tags",metric]) if top is None else top
-            summ = pd.DataFrame(columns=["count","mean","min","max"]) if summ is None else summ
+
+            top = (
+                pd.DataFrame(columns=["alpha_id", "run_id", "timestamp", "tags", metric])
+                if top is None
+                else top
+            )
+            summ = pd.DataFrame(columns=["count", "mean", "min", "max"]) if summ is None else summ
         else:
             if top is None:
                 top_sql = f"""

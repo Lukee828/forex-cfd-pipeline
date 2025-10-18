@@ -1,3 +1,4 @@
+param()
 # tools/MT5Api-Account.ps1
 [CmdletBinding()]
 param()
@@ -20,3 +21,4 @@ Set-Content -LiteralPath $pyFile -Encoding UTF8 -Value @(
   '    mt5.shutdown()',
 )
 & $py $pyFile
+

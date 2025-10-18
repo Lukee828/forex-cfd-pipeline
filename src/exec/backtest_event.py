@@ -1,8 +1,17 @@
+from __future__ import annotations
 import argparse
 import os
 from src.backtest.data_feed import ParquetDataFeed
 from src.backtest.strategies.ma_cross import MACrossStrategy
 from src.backtest.engine_loop import EngineLoop
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
 
 
 def main():

@@ -1,7 +1,16 @@
+from __future__ import annotations
 import argparse
 import pandas as pd
 import numpy as np
 import math
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
 
 
 def _drawdown_stats(equity: pd.Series):

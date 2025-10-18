@@ -1,9 +1,20 @@
-# src/exec/freeze_params.py
+from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
 import pandas as pd
 import yaml
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+# src/exec/freeze_params.py
 
 
 def resolve_summary(path_like: str) -> Path:

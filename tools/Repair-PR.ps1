@@ -1,4 +1,5 @@
 #requires -Version 7.0
+param()
 param(
   [int]$Number,
   [switch]$Rebase,
@@ -69,3 +70,4 @@ try {
     throw
   }
 }
+

@@ -1,3 +1,4 @@
+param()
 <# Step-1-SmokeAndExport.ps1 (PS7) #>
 param(
   [string]$Python = ".\.venv311\Scripts\python.exe",
@@ -31,3 +32,4 @@ Write-Host "== SUMMARY HTML (first lines) ==" -ForegroundColor Yellow
 Get-Content $Summary | Select-Object -First 10
 
 Write-Host "[OK]   Smoke/export completed" -ForegroundColor Green
+

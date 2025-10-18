@@ -1,13 +1,22 @@
-# src/exec/refresh_prices.py
 from __future__ import annotations
 import argparse
-import subprocess
 import sys
 import os
 from pathlib import Path
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import pandas as pd
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+# src/exec/refresh_prices.py
 
 ROOT = Path(__file__).resolve().parents[2]
 DATA = ROOT / "data"
@@ -101,7 +110,7 @@ def worker(
         return (symbol, "DRY-RUN " + " ".join(cmd))
 
     out_folder.mkdir(parents=True, exist_ok=True)
-    cp = subprocess.run(cmd, capture_output=True, text=True, cwd=str(ROOT))
+    cp = _no_subprocess(cmd, capture_output=True, text=True, cwd=str(ROOT))
     if cp.returncode != 0:
         return (
             symbol,

@@ -1,3 +1,4 @@
+param()
 # tools/Verify-Manifest.ps1
 $ErrorActionPreference = 'Stop'
 
@@ -26,3 +27,4 @@ if ($diff) {
 }
 
 Write-Host "[OK]  Integrity OK — manifest matches." -ForegroundColor Green
+

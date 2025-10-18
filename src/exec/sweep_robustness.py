@@ -1,8 +1,6 @@
-# sweep_robustness.py — IS/OOS-aware robustness grid with safe writes
-
+from __future__ import annotations
 import argparse
 import itertools
-import subprocess
 import sys
 import math
 import time
@@ -11,10 +9,22 @@ from datetime import datetime
 from pathlib import Path
 import pandas as pd
 import numpy as np
-
-# ---------- shared root helpers ----------
 from pathlib import Path as _P
 import os as _os
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+# sweep_robustness.py — IS/OOS-aware robustness grid with safe writes
+
+
+# ---------- shared root helpers ----------
 
 PRESET_ROOT = r"C:\Users\speed\Desktop\Forex CFD's system"
 
@@ -59,7 +69,7 @@ def ann_metrics(equity_csv: Path):
 
 
 def run_cmd(cmd, cwd=None):
-    cp = subprocess.run(cmd, text=True, capture_output=True, cwd=cwd)
+    cp = _no_subprocess(cmd, text=True, capture_output=True, cwd=cwd)
     if cp.returncode != 0:
         print("---- STDOUT ----\n", cp.stdout)
         print("---- STDERR ----\n", cp.stderr)

@@ -1,3 +1,20 @@
+from __future__ import annotations
+import argparse
+import sys
+from pathlib import Path
+from datetime import datetime, timezone
+from typing import Optional
+import pandas as pd
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
@@ -28,19 +45,9 @@ Notes:
     (so for EURUSD, 1 lot = 100k base; we divide by contract_size then price)
 """
 
-from __future__ import annotations
-
-import argparse
-import sys
-from pathlib import Path
-from datetime import datetime, timezone
-from typing import Optional
-
-import pandas as pd
 
 # Optional MT5 price sanity (if terminal is running)
 try:
-    import MetaTrader5 as mt5  # type: ignore
 
     _HAVE_MT5 = True
 except Exception:
@@ -250,3 +257,10 @@ def main(argv=None):
 
 if __name__ == "__main__":
     main()
+try:
+    import MetaTrader5 as mt5  # type: ignore
+except Exception as ex:  # pragma: no cover
+    import sys
+
+    print(f"ERROR: failed to import MetaTrader5: {ex}", file=sys.stderr)
+    sys.exit(2)

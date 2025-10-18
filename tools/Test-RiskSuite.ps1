@@ -1,3 +1,4 @@
+param()
 $ErrorActionPreference = "Stop"
 
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-SpreadGuard.ps1
@@ -17,3 +18,4 @@ if ($LASTEXITCODE -ne 0) { throw "Signature smoke failed." }
 # Resilience smoke
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-Resilience.ps1
 if (0 -ne 0) { throw "Resilience subtest failed." }
+

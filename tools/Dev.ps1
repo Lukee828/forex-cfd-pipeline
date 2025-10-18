@@ -1,3 +1,4 @@
+param()
 $ErrorActionPreference = "Stop"
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 try {
@@ -7,3 +8,4 @@ try {
   Write-Error "Failed to import Dev.psm1: $($_.Exception.Message)"
   throw
 }
+

@@ -1,3 +1,4 @@
+param()
 $ErrorActionPreference = "Stop"
 $root = (& git rev-parse --show-toplevel 2>$null) ?? (Get-Location).Path
 $python = Join-Path $root ".venv\Scripts\python.exe"
@@ -11,3 +12,4 @@ $smoke = Join-Path $root "tools\Smoke-AlphaFactory.py"
 & $python $smoke
 if ($LASTEXITCODE -ne 0) { throw "AlphaFactory smoke failed." }
 Write-Host "AlphaFactory smoke OK" -ForegroundColor Green
+

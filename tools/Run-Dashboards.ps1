@@ -1,4 +1,5 @@
 #requires -Version 7.0
+param()
 param(
   [string]$InputCsv = "data/features.csv",
   [string]$OutHtml  = "reports/feature_dashboards.html",
@@ -36,3 +37,4 @@ p = render_dashboards(df, out, title="Feature Dashboards", max_features=$MaxFeat
 print(p.as_posix())
 "@
 Invoke-Python -Code $pyCode
+

@@ -1,4 +1,4 @@
-﻿# src/backtest/execution.py
+# src/backtest/execution.py
 from dataclasses import dataclass
 from typing import Dict
 from .events import OrderEvent, FillEvent

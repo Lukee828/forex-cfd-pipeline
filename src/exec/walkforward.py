@@ -1,6 +1,5 @@
-# src/exec/walkforward.py
+from __future__ import annotations
 import argparse
-import subprocess
 import sys
 import json
 import math
@@ -10,11 +9,22 @@ from datetime import datetime
 import pandas as pd
 import numpy as np
 
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+# src/exec/walkforward.py
+
 ROOT = Path(r"C:\Users\speed\Desktop\Forex CFD's system")  # adjust if needed
 
 
 def run(cmd, cwd=ROOT):
-    cp = subprocess.run(cmd, cwd=str(cwd), capture_output=True, text=True)
+    cp = _no_subprocess(cmd, cwd=str(cwd), capture_output=True, text=True)
     if cp.returncode != 0:
         print("---- STDOUT ----\n", cp.stdout)
         print("---- STDERR ----\n", cp.stderr)

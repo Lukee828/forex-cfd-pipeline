@@ -1,3 +1,4 @@
+param()
 $ErrorActionPreference = "Stop"
 
 # Locate pwsh.exe
@@ -42,3 +43,4 @@ $json | ConvertTo-Json -Depth 64 | Set-Content -Encoding UTF8 $settings
 Write-Host "Configured VS Code to use pwsh by default."
 Write-Host "pwsh path: $pwsh"
 Write-Host "settings.json: $settings"
+

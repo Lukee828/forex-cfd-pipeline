@@ -1,9 +1,18 @@
+from __future__ import annotations
 import argparse
 import yaml
 import pandas as pd
 from ..core.loader import load_parquet
 from ..sleeves.ts_mom import signals as ts_signals
 from ..exec.aggregate import to_net
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
 
 
 def main():

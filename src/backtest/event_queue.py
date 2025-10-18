@@ -1,4 +1,4 @@
-﻿# src/backtest/event_queue.py
+# src/backtest/event_queue.py
 from collections import deque
 from typing import Deque, Generic, Optional, TypeVar
 

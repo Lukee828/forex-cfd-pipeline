@@ -1,0 +1,49 @@
+python:
+  version: '3.11'
+  forbidden_imports:
+  - seaborn
+  forbidden_calls:
+  - input(
+  - eval(
+  - exec(
+  line_endings: LF
+  encoding: UTF-8
+powershell:
+  require_param_block: true
+  forbidden_cmdlets:
+  - Read-Host
+  - Start-Sleep
+  max_sleep_seconds: 3
+  no_interactive: true
+repo:
+  allowed_write_paths:
+  - artifacts/
+  - data/
+  - docs/
+  - ai_lab/
+  forbidden_paths:
+  - .ssh
+  - .git
+  - .venv
+  - C:\Windows\
+network:
+  no_network: true
+  python_forbidden_imports:
+  - requests
+  - aiohttp
+  - httpx
+  - urllib.request
+  - socket
+  python_forbidden_calls:
+  - subprocess.Popen(
+  - subprocess.run(
+  - os.system(
+  powershell_forbidden_cmdlets:
+  - Invoke-WebRequest
+  - Invoke-RestMethod
+  - Start-Process
+  - 'curl '
+  allow_localhost_only: true
+  localhost_ports_allowlist:
+  - 8000
+  - 11434

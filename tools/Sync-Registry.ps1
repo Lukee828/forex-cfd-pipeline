@@ -1,3 +1,4 @@
+param()
 # PS7-only
 $ErrorActionPreference = "Stop"
 $root = (Get-Location).Path
@@ -43,3 +44,4 @@ if ($LASTEXITCODE) { throw "Migration failed ($LASTEXITCODE)" }
 if ($LASTEXITCODE) { throw "sync_registry.py failed ($LASTEXITCODE)" }
 
 Write-Host "✓ Registry DB migrated and synced successfully." -ForegroundColor Green
+

@@ -1,7 +1,16 @@
+from __future__ import annotations
 import argparse
 import pandas as pd
 import numpy as np
 from pathlib import Path
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
 
 
 def pareto_front(df, xcol="maxdd", ycol="sharpe"):

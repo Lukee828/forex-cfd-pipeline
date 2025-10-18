@@ -1,4 +1,4 @@
-﻿from dataclasses import dataclass, field
+from dataclasses import dataclass, field
 from typing import Dict
 from .events import MarketEvent, SignalEvent, OrderEvent, FillEvent
 

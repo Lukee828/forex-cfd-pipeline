@@ -1,3 +1,4 @@
+param()
 $ErrorActionPreference = "Stop"
 $py = ".\.venv\Scripts\python.exe"
 $env:PYTHONPATH = "."
@@ -26,3 +27,4 @@ assert np.isnan(y[:19]).all()
 print("ROLL numba OK (or fallback)")
 "@
 $code2 | & $py -
+

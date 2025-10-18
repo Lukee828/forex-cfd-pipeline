@@ -1,4 +1,4 @@
-﻿[CmdletBinding()]
+[CmdletBinding()]
 param(
   [string]$Cfg = "config/production.yaml",
   [string]$Start = "",

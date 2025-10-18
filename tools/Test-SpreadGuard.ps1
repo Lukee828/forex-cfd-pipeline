@@ -1,3 +1,4 @@
+param()
 $ErrorActionPreference = "Stop"
 $python = ".\.venv\Scripts\python.exe"
 
@@ -5,3 +6,4 @@ $python = ".\.venv\Scripts\python.exe"
 if ($LASTEXITCODE -ne 0) { throw "SpreadGuard smoke failed." }
 
 Write-Host "SpreadGuard smoke OK" -ForegroundColor Green
+

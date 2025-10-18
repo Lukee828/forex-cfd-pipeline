@@ -1,4 +1,5 @@
 #requires -Version 7.0
+param()
 param(
   [string]$DbPath = "runs/fs_demo/fs.db",
   [string]$Symbol = "EURUSD",
@@ -35,3 +36,4 @@ if ($LASTEXITCODE) { throw "Demo failed with exit code $LASTEXITCODE" }
 
 Write-Host "• Success." -ForegroundColor Green
 Write-Host "  DB path: $fullDb" -ForegroundColor Gray
+

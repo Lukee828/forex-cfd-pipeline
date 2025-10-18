@@ -1,6 +1,15 @@
+from __future__ import annotations
 import argparse
 from pathlib import Path
 import pandas as pd
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
 
 
 def resample_one(src: Path, dst: Path):

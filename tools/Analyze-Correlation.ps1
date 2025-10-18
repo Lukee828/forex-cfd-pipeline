@@ -1,3 +1,4 @@
+param()
 # tools/Analyze-Correlation.ps1
 param(
   [Parameter(Mandatory=$true)][string]$InputCsv,
@@ -50,3 +51,4 @@ Write-Host "✅ Correlation analysis complete:"
 Write-Host "  • CSV  : $newOut\corr_matrix.csv"
 Write-Host "  • HTML : $newOut\corr_matrix.html"
 Write-Host "  • Telemetry appended -> $telemetryPath"
+

@@ -1,7 +1,24 @@
+from __future__ import annotations
+import argparse
+import sys
+from pathlib import Path
+import pandas as pd
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
 #!/usr/bin/env python
+
 # -*- coding: utf-8 -*-
 
 """
+
 Daily orchestrator:
 
 1) Run the demo backtest to (re)generate positions & analytics artifacts.
@@ -20,22 +37,13 @@ Usage example:
   python -m src.exec.daily_run --out_prefix DAILY_LIVE --mt5_verify_positions
 """
 
-from __future__ import annotations
-
-import argparse
-import sys
-import subprocess
-from pathlib import Path
-
-import pandas as pd
-
 
 ROOT = Path(__file__).resolve().parents[2]  # repo root
 
 
 def run(cmd: list[str]) -> int:
     print("RUN:", " ".join(cmd))
-    return subprocess.run(cmd, check=False).returncode
+    return _no_subprocess(cmd, check=False).returncode
 
 
 def backtest_step(out_prefix: str, start: str | None = None, end: str | None = None) -> None:

@@ -1,3 +1,4 @@
+param()
 $ErrorActionPreference = "Stop"; Set-StrictMode -Version Latest
 $repo = (git rev-parse --show-toplevel) 2>$null
 if (-not $repo) { throw "Run inside the git repo root." }
@@ -21,3 +22,4 @@ if (Get-Command pytest -ErrorAction SilentlyContinue) {
 
 if ($ok) { Write-Host "✅ Hooks & tests green." -ForegroundColor Green; exit 0 }
 Write-Host "❌ Hooks and/or tests failed. See output above." -ForegroundColor Red; exit 1
+

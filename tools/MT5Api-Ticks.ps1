@@ -1,3 +1,4 @@
+param()
 # tools/MT5Api-Ticks.ps1
 [CmdletBinding()]
 param([string[]]$Symbols = @("XAUUSD","US30.cash","GER40.cash"))
@@ -21,3 +22,4 @@ Set-Content -LiteralPath $pyFile -Encoding UTF8 -Value @(
   '    mt5.shutdown()',
 )
 & $py $pyFile @Symbols
+

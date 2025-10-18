@@ -1,3 +1,14 @@
+from __future__ import annotations
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
 # PATCH: ASCII-only prints to avoid Windows cp1250 UnicodeEncodeError
 # Replace the corresponding print block in your backtester with this safe version.
 

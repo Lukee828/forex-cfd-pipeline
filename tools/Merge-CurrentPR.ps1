@@ -1,1 +1,3 @@
+param()
 <--- script body here --->
+

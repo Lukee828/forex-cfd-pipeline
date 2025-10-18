@@ -1,7 +1,18 @@
-# src/exec/reconcile.py
+from __future__ import annotations
 import argparse
 import pandas as pd
 from pathlib import Path
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+# src/exec/reconcile.py
 
 # import your chosen broker reader (e.g., mt5 or ib_insync) and reuse mapping from publisher
 

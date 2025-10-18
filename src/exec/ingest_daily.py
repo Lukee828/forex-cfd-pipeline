@@ -1,8 +1,19 @@
-# src/exec/ingest_daily.py
+from __future__ import annotations
 import argparse
 from pathlib import Path
 import pandas as pd
 from src.data.sqlite_store import OHLCVStore
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+# src/exec/ingest_daily.py
 
 
 def main():

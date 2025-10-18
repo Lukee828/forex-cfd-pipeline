@@ -1,13 +1,25 @@
-#!/usr/bin/env python
-# src/exec/ma_grid.py
+from __future__ import annotations
+import matplotlib
+import matplotlib.pyplot as plt
 import argparse
 from pathlib import Path
 import numpy as np
 import pandas as pd
-
 from src.backtest.data_feed import ParquetDataFeed
 from src.backtest.engine_loop import EngineLoop
 from src.backtest.strategies.ma_cross import MACrossStrategy
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+#!/usr/bin/env python
+# src/exec/ma_grid.py
 
 
 def stats_from_equity(eq: pd.Series) -> dict:
@@ -80,10 +92,8 @@ def main():
 
     # Save best equity plot
     try:
-        import matplotlib
 
         matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
 
         plt.figure()
         best["equity"].plot(title=f"Best MA (fast={best['fast']}, slow={best['slow']})")

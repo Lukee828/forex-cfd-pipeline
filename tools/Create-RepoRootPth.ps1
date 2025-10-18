@@ -1,3 +1,4 @@
+param()
 # tools/Create-RepoRootPth.ps1  (PS7)
 $ErrorActionPreference = "Stop"
 
@@ -23,3 +24,4 @@ Write-Host ("Wrote {0} -> {1}" -f $pthPath, $repoRoot) -ForegroundColor Green
 
 # 5) Smoke check
 & $py -c "import src, sys; print('src import OK:', list(getattr(src,'__path__',[])))"
+

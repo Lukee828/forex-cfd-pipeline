@@ -1,0 +1,18 @@
+name: Alpha Factory AI Governance Layer
+version: '0.1'
+components:
+  policy: policy.yaml
+  state: ai_lab/state.json
+  plan: ai_lab/plan.yaml
+  guard: tools/AI-Guard.ps1
+  agent: ai_lab/serve_agent.py
+  indexer: ai_lab/indexer.py
+  scheduler: ai_lab/research_scheduler.py
+  drift_dashboard: ai_lab/drift_dashboard.py
+  evals: ai_lab/evals/tasks.yaml
+  tests_policy: tests/policy
+mcp:
+  local_only: true
+  state_file: ai_lab/state.json
+  plan_file: ai_lab/plan.yaml
+  logs_dir: ai_lab/logs

@@ -1,4 +1,5 @@
 #requires -Version 7.0
+param()
 param([int]$Number)
 $ErrorActionPreference='Stop'
 for($i=0;$i -lt 20;$i++){
@@ -7,3 +8,4 @@ for($i=0;$i -lt 20;$i++){
   if($j.s -eq 'MERGED'){ break }
   try { gh pr merge $Number --squash --delete-branch --auto; break } catch { Start-Sleep 3 }
 }
+

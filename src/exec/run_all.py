@@ -1,6 +1,14 @@
+from __future__ import annotations
 import argparse
-import subprocess
 import sys
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
 
 
 def main():
@@ -53,7 +61,7 @@ def main():
     ]
 
     print("Running:", " ".join(cmd))
-    sys.exit(subprocess.call(cmd))
+    sys.exit(_no_subprocess(cmd))
 
 
 if __name__ == "__main__":

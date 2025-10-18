@@ -1,4 +1,4 @@
-# src/exec/backtest.py  (headless-safe)
+from __future__ import annotations
 import argparse
 from pathlib import Path
 import sys
@@ -6,15 +6,25 @@ import yaml
 import pandas as pd
 import numpy as np
 from datetime import datetime, UTC
-
-# Force non-GUI backend before importing pyplot (fixes Tcl/Tk error)
 import matplotlib
-
-matplotlib.use("Agg")
 import matplotlib.pyplot as plt
-
 from backtest.feature_flags import RuntimeState  # noqa: E402
 from backtest.runner_hooks import log_flag_states  # noqa: E402
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+# src/exec/backtest.py  (headless-safe)
+
+# Force non-GUI backend before importing pyplot (fixes Tcl/Tk error)
+
+matplotlib.use("Agg")
 
 
 def _read_prices_1d(symbol: str) -> pd.DataFrame:

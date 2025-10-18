@@ -1,3 +1,4 @@
+param()
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 function Info($m){ Write-Host "[INFO] $m" -ForegroundColor Cyan }
@@ -26,3 +27,4 @@ $notes = @"
 "@
 [IO.File]::WriteAllText($notesPath, ($notes -replace "`r?`n","`n"), (New-Object System.Text.UTF8Encoding($false)))
 Ok "Wrote $notesPath"
+

@@ -1,5 +1,4 @@
-# make_report_html.py — report with dual (IS/OOS) robustness comparison
-
+from __future__ import annotations
 import argparse
 import pandas as pd
 import numpy as np
@@ -8,10 +7,22 @@ import plotly.graph_objects as go
 import plotly.express as px
 from pathlib import Path
 from datetime import datetime
-
-# ---------- shared root helpers ----------
 from pathlib import Path as _P
 import os as _os
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+# make_report_html.py — report with dual (IS/OOS) robustness comparison
+
+
+# ---------- shared root helpers ----------
 
 PRESET_ROOT = r"C:\Users\speed\Desktop\Forex CFD's system"
 
@@ -270,7 +281,6 @@ def make_report(
                 xaxis_title="|Max Drawdown|",
                 yaxis_title="Sharpe",
             )
-            from plotly.io import to_html as _to_html
 
             overlay_html = _to_html(fig_sc, include_plotlyjs=False, full_html=False)
     else:
@@ -284,7 +294,6 @@ def make_report(
                 )
 
     # assemble HTML
-    from plotly.io import to_html
 
     parts = [
         "<h1>Backtest Report</h1>",
@@ -343,3 +352,15 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+def _no_subprocess(*args, **kwargs):
+    raise RuntimeError("Blocked by local-only policy: subprocess is disabled")
+
+
+try:
+    from plotly.io import to_html  # type: ignore
+except Exception:  # pragma: no cover
+    from plotly.io import to_html as _to_html  # type: ignore
+
+    to_html = _to_html

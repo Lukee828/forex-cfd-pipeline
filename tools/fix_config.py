@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python
+#!/usr/bin/env python
 # tools/fix_config.py
 import argparse
 import sys

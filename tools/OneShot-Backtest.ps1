@@ -1,4 +1,4 @@
-﻿param(
+param(
   [string]repos:
   - repo: https://github.com/psf/black
     rev: 25.9.0

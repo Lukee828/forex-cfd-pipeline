@@ -1,3 +1,4 @@
+param()
 #requires -Version 7.0
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
@@ -75,3 +76,4 @@ try {
   "OK  No recent runs on main (or none returned)"
 }
 # End recent runs
+
