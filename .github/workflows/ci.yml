@@ -1,4 +1,4 @@
-name: CI (PS7)
+﻿name: CI (PS7)
 
 on:
   pull_request:
@@ -24,11 +24,6 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Setup PowerShell 7
-        uses: PowerShell/PowerShell@v1
-        with:
-          powershell-version: "7.4.2"
-
       - name: Install (PS7)
         shell: pwsh
         run: pwsh -File tools/CI-Install.ps1
@@ -36,3 +31,4 @@ jobs:
       - name: Checks (Smoke)
         shell: pwsh
         run: pwsh -File tools/CI-Checks.ps1 -SmokeOnly
+
