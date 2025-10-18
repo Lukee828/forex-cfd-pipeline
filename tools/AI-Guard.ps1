@@ -1,8 +1,19 @@
+# --- CI guard: skip on non-Windows runners ---
+if (-not $IsWindows) {
+  Write-Host "AI-Guard: skipping on non-Windows runner."
+  exit 0
+}
+# ---------------------------------------------
 param(
-  [string]$PyExe = ".\.venv311\Scripts\python.exe",
+  [string]$PyExe = "$PyExe",
   [string]$PolicyPath = "policy.yaml",
   [switch]$ReportOnly
 )
+
+if (-not $PyExe) {
+  $cmd = Get-Command python -ErrorAction SilentlyContinue
+  if ($cmd) { $PyExe = $cmd.Source } else { $PyExe = "python" }
+}
 $ErrorActionPreference = "Stop"
 function Fail($m){ Write-Host "AI-GUARD: $m" -ForegroundColor Red; exit 1 }
 $violations = [System.Collections.Generic.List[string]]::new()
@@ -106,3 +117,4 @@ if ($LASTEXITCODE -ne 0) { if ($ReportOnly){ Report "PyTest failed." } else { Fa
 
 if ($ReportOnly -and $violations.Count) { exit 1 }
 Write-Host "AI-GUARD: PASS" -ForegroundColor Green
+
