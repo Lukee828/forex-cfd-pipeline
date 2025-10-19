@@ -3,16 +3,13 @@ from __future__ import annotations
 import argparse
 import csv
 import html
-import json
 import sqlite3
-import sys
 import time
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Dict, List
 
 # We intentionally use sqlite3 (stdlib) even if the filename ends with .duckdb.
 # Tests call our CLI only; they never open the DB themselves.
-
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS runs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -23,12 +20,14 @@ CREATE TABLE IF NOT EXISTS runs (
 );
 """
 
+
 def _connect(db_path: str) -> sqlite3.Connection:
     p = Path(db_path)
     p.parent.mkdir(parents=True, exist_ok=True)
     con = sqlite3.connect(str(p))
     con.execute("PRAGMA journal_mode=WAL;")
     return con
+
 
 def _parse_metrics(metrics_str: str) -> Dict[str, float]:
     out: Dict[str, float] = {}
@@ -48,12 +47,14 @@ def _parse_metrics(metrics_str: str) -> Dict[str, float]:
             pass
     return out
 
+
 def cmd_init(args: argparse.Namespace) -> int:
     con = _connect(args.db)
     with con:
         con.executescript(SCHEMA)
     print(f"[init] DB ready at {args.db}")
     return 0
+
 
 def cmd_register(args: argparse.Namespace) -> int:
     con = _connect(args.db)
@@ -68,10 +69,12 @@ def cmd_register(args: argparse.Namespace) -> int:
     print(f"[register] cfg={args.cfg} sharpe={sharpe} tags={args.tags or ''}")
     return 0
 
+
 def cmd_refresh_runs(args: argparse.Namespace) -> int:
     # No-op for this minimal implementation
     print("[refresh-runs] OK")
     return 0
+
 
 def cmd_search(args: argparse.Namespace) -> int:
     con = _connect(args.db)
@@ -92,6 +95,7 @@ def cmd_search(args: argparse.Namespace) -> int:
         print(f"{cfg}\t{metric}={val}\ttags={tags}")
     return 0
 
+
 def _export_best(con: sqlite3.Connection, metric: str, top: int, out: Path) -> None:
     if metric != "sharpe":
         out.write_text("", encoding="utf-8")
@@ -109,6 +113,7 @@ def _export_best(con: sqlite3.Connection, metric: str, top: int, out: Path) -> N
         w.writerow(["cfg", "sharpe", "tags"])
         for cfg, tags, val in rows:
             w.writerow([cfg, val, tags])
+
 
 def _export_summary(con: sqlite3.Connection, metric: str, out: Path) -> None:
     if metric != "sharpe":
@@ -129,6 +134,7 @@ def _export_summary(con: sqlite3.Connection, metric: str, out: Path) -> None:
     lines.append("</table></body></html>")
     out.write_text("\n".join(lines), encoding="utf-8")
 
+
 def cmd_export(args: argparse.Namespace) -> int:
     con = _connect(args.db)
     out = Path(args.out)
@@ -146,9 +152,12 @@ def cmd_export(args: argparse.Namespace) -> int:
     print(f"[export] (noop) {args.what} as {args.format} -> {out}")
     return 0
 
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(prog="alpha_factory.registry_cli", add_help=True)
-    p.add_argument("--db", required=True, help="Path to DB file (sqlite3 here, extension is ignored)")
+    p.add_argument(
+        "--db", required=True, help="Path to DB file (sqlite3 here, extension is ignored)"
+    )
     sub = p.add_subparsers(dest="cmd", required=True)
 
     sp = sub.add_parser("init")
@@ -179,10 +188,12 @@ def build_parser() -> argparse.ArgumentParser:
 
     return p
 
+
 def main(argv: List[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     return int(args.func(args))
+
 
 if __name__ == "__main__":
     raise SystemExit(main())
