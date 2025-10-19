@@ -5,3 +5,5 @@ pre-commit>=3.6
 yfinance>=0.2.50
 
 yfinance>=0.2.0
+duckdb>=0.10.0
+matplotlib>=3.8

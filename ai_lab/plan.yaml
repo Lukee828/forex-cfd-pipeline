@@ -1,0 +1,33 @@
+version: 1
+updated: '2025-10-18T12:03:14'
+items:
+- id: PL-100
+  title: Integrate traffic-cop agent (FastAPI)
+  type: task
+  status: spec
+  priority: P0
+  area: infra
+  module: ai_lab/serve_agent.py
+  tags:
+  - agent
+  - guarded-generate
+  - localhost-only
+  created: '2025-10-18T12:03:14'
+  updated: '2025-10-18T12:03:14'
+  owner: lukasz
+  branch: feat/traffic-cop
+  pr: null
+  chat_ref: this-thread
+  depends_on: []
+  acceptance:
+  - tools/Bootstrap-SelfTest.ps1 exit 0
+  - curl http://127.0.0.1:8000/health returns ok
+  metrics_target: {}
+  guardrails:
+  - No interactive PS7
+  - Python 3.11 only
+  - Black/Ruff clean
+  - Agent binds to 127.0.0.1 only
+  - No outbound network calls
+  notes: "Local-only agent with spec\u2192retrieve\u2192plan\u2192diff\u2192validate\
+    \ flow."
