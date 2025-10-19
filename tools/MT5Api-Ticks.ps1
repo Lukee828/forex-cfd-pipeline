@@ -1,3 +1,8 @@
+param()
+
+# Fail-fast & stricter semantics for PS7 scripts
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 3.0
 # tools/MT5Api-Ticks.ps1
 [CmdletBinding()]
 param([string[]]$Symbols = @("XAUUSD","US30.cash","GER40.cash"))

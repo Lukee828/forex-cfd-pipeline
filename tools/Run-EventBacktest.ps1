@@ -1,4 +1,9 @@
-﻿[CmdletBinding()]
+param()
+
+# Fail-fast & stricter semantics for PS7 scripts
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 3.0
+[CmdletBinding()]
 param(
   [string]$Cfg = "config/production.yaml",
   [string]$Start = "",

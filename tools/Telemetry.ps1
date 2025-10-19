@@ -1,3 +1,8 @@
+param()
+
+# Fail-fast & stricter semantics for PS7 scripts
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 3.0
 # Simple telemetry helper; writes a line to .meta/telemetry.log and Step Summary in CI.
 param(
   [Parameter(Mandatory)][string]$Message

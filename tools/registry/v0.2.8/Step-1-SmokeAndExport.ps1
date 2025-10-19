@@ -1,4 +1,15 @@
+param()
 <# Step-1-SmokeAndExport.ps1 (PS7) #>
+param()
+
+# Fail-fast & stricter semantics for PS7 scripts
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 3.0
+param()
+
+# Fail-fast & stricter semantics for PS7 scripts
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 3.0
 param(
   [string]$Python = ".\.venv311\Scripts\python.exe",
   [string]$Db     = "$PWD\tmp_v028.duckdb",
@@ -31,3 +42,4 @@ Write-Host "== SUMMARY HTML (first lines) ==" -ForegroundColor Yellow
 Get-Content $Summary | Select-Object -First 10
 
 Write-Host "[OK]   Smoke/export completed" -ForegroundColor Green
+

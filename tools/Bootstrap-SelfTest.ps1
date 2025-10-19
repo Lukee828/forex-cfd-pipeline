@@ -1,3 +1,8 @@
+param()
+
+# Fail-fast & stricter semantics for PS7 scripts
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 3.0
 # tools/Bootstrap-SelfTest.ps1
 [CmdletBinding()]
 param([switch]$NoFail)

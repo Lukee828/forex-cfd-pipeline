@@ -1,4 +1,5 @@
-﻿<# tools/Upload-LastRun.ps1 — Windows PowerShell 5.1 compatible
+param()
+<# tools/Upload-LastRun.ps1 — Windows PowerShell 5.1 compatible
 
 Usage examples:
   powershell -ExecutionPolicy Bypass -File tools\Upload-LastRun.ps1
@@ -6,6 +7,16 @@ Usage examples:
   powershell -ExecutionPolicy Bypass -File tools\Upload-LastRun.ps1 -RunPath ".\runs\backtest_20251001_204821"
 #>
 
+param()
+
+# Fail-fast & stricter semantics for PS7 scripts
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 3.0
+param()
+
+# Fail-fast & stricter semantics for PS7 scripts
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 3.0
 [CmdletBinding()]
 param(
   [string]$Tag = "",
@@ -143,3 +154,4 @@ if (-not $repo) { $repo = "(unknown repo)" }
 $releaseUrl = "https://github.com/$repo/releases/tag/$Tag"
 Write-Host "`n✔ Done. Release: $releaseUrl"
 if ($equity) { Write-Host "   Preview image: $($equity.Name)" }
+

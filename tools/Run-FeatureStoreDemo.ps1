@@ -1,3 +1,8 @@
+param()
+
+# Fail-fast & stricter semantics for PS7 scripts
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 3.0
 #requires -Version 7.0
 param(
   [string]$DbPath = "runs/fs_demo/fs.db",
