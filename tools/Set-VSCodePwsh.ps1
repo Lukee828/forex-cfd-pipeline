@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 $ErrorActionPreference = "Stop"
 
 # Locate pwsh.exe

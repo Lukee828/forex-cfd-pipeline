@@ -1,4 +1,8 @@
-﻿<# tools/Upload-LastRun.ps1 — Windows PowerShell 5.1 compatible
+param()
+[CmdletBinding()]
+param()
+
+<# tools/Upload-LastRun.ps1 — Windows PowerShell 5.1 compatible
 
 Usage examples:
   powershell -ExecutionPolicy Bypass -File tools\Upload-LastRun.ps1

@@ -4,4 +4,3 @@
   "allowed_symbols": ["XAUUSD","US30","DE40"],
   "risk_guard": { "enabled": true }
 }
-

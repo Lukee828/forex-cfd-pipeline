@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 # PS7-only
 $ErrorActionPreference = "Stop"
 $root = (Get-Location).Path

@@ -1,5 +1,8 @@
-#requires -Version 7.0
 param()
-# No-op manifest updater to satisfy pre-commit. Extend later if needed.
-Write-Host "Hook-UpdateManifest.ps1: OK (no-op)" -ForegroundColor DarkGray
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+# no-op placeholder to satisfy pre-commit
 exit 0

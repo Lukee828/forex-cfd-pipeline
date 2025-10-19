@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 $ErrorActionPreference = "Stop"
 $python = ".\.venv\Scripts\python.exe"
 

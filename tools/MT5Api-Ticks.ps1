@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 # tools/MT5Api-Ticks.ps1
 [CmdletBinding()]
 param([string[]]$Symbols = @("XAUUSD","US30.cash","GER40.cash"))

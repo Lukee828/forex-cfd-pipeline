@@ -1,3 +1,4 @@
+param()
 # tools/Analyze-Correlation.ps1
 param(
   [Parameter(Mandatory=$true)][string]$InputCsv,

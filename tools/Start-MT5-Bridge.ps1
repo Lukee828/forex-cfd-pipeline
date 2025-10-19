@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 # tools/Start-MT5-Bridge.ps1
 [CmdletBinding()]
 param([string]$Config = "configs/bridge_mt5.yaml")

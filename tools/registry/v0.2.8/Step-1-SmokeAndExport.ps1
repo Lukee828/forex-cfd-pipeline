@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 <# Step-1-SmokeAndExport.ps1 (PS7) #>
 param(
   [string]$Python = ".\.venv311\Scripts\python.exe",

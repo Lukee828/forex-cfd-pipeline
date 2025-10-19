@@ -1,10 +1,8 @@
 name: ci
-
 on:
-  push:
-    branches: [ main, "infra/**", "docs/**" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build-test:
@@ -24,4 +22,13 @@ jobs:
       - name: Black (format check)
         run: black --check .
       - name: Pytest
-        run: python -m pytest -q
+        env:
+          MPLBACKEND: Agg
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/src
+        run: |
+          python -m pip install matplotlib
+          python - <<'PY'
+          import matplotlib
+          matplotlib.use("Agg")
+          PY
+          python -m pytest -q

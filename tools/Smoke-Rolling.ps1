@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 $ErrorActionPreference = "Stop"
 $py = ".\.venv\Scripts\python.exe"
 $env:PYTHONPATH = "."

@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 $ErrorActionPreference = "Stop"
 $root = (& git rev-parse --show-toplevel 2>$null) ?? (Get-Location).Path
 $python = Join-Path $root ".venv\Scripts\python.exe"
