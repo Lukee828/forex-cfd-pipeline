@@ -1,0 +1,29 @@
+    def search(
+        self,
+        metric: str,
+        min: Optional[float] = None,
+        max: Optional[float] = None,   # accept 'max' as tests expect
+        tag: Optional[str] = None,
+        limit: int = 10,
+    ) -> List[ScoredRow]:
+        """Filter by metric threshold(s) and optional tag; return scored rows sorted by metric desc then recency."""
+        from builtins import max as _max  # avoid clash with the param name
+
+        metric_l = metric.lower()
+        res: List[Tuple[_Entry, float]] = []
+        for lst in self._by_name.values():
+            for e in lst:
+                m = {k.lower(): v for k, v in e.metrics.items()}
+                if metric_l not in m:
+                    continue
+                v = float(m[metric_l])
+                if min is not None and v < float(min):
+                    continue
+                if max is not None and v > float(max):
+                    continue
+                if tag is not None and tag not in e.tags:
+                    continue
+                res.append((e, v))
+
+        res_sorted = sorted(res, key=lambda t: (t[1], t[0].ts, t[0].id), reverse=True)
+        return [self._as_tuple(e) + (score,) for (e, score) in res_sorted[: _max(0, int(limit))]]
