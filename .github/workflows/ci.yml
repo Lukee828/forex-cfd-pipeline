@@ -1,27 +1,37 @@
-name: ci
-
+name: CI
 on:
-  push:
-    branches: [ main, "infra/**", "docs/**" ]
   pull_request:
-    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build-test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: pwsh
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: "pip"
+
       - name: Install project
         run: |
           python -m pip install -U pip
           python -m pip install -e ".[dev]"
+
+      - name: Repo Guard (PS7)
+        run: pwsh tools/AI-Guard.ps1 -SkipTests
+
       - name: Ruff (lint)
-        run: ruff check .
+        run: python -m ruff check .
+
       - name: Black (format check)
-        run: black --check .
+        run: python -m black --check .
+
       - name: Pytest
         run: python -m pytest -q
+
