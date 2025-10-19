@@ -1,10 +1,8 @@
 name: ci
-
 on:
-  push:
-    branches: [ main, "infra/**", "docs/**" ]
   pull_request:
-    branches: [ main ]
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build-test:
