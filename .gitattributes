@@ -1,1 +1,7 @@
-(file contents above)
+*             text=auto
+*.py          text eol=lf
+*.ps1         text eol=crlf
+*.psm1        text eol=crlf
+*.sh          text eol=lf
+*.yml         text eol=lf
+*.yaml        text eol=lf
