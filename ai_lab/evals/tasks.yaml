@@ -1,0 +1,9 @@
+version: 1
+tasks:
+- id: EV-001
+  title: Guard passes on clean repo
+  check: pwsh tools/AI-Guard.ps1
+- id: EV-002
+  title: Plan YAML schema valid
+  check: .\.venv311\Scripts\python.exe -m pytest tests/policy/test_config_schema.py
+    -q

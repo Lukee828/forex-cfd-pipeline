@@ -1,4 +1,5 @@
 name: Check for push or pull_request_target triggers
+
 on:
   pull_request:
   workflow_dispatch:
@@ -6,22 +7,53 @@ on:
 jobs:
   check-forbidden-triggers:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: pwsh
     steps:
       - uses: actions/checkout@v4
+
       - name: Fail if forbidden triggers exist
-        shell: bash
         run: |
-          set -euo pipefail
-          shopt -s nullglob
-          files=(.github/workflows/*.yml .github/workflows/*.yaml)
-          banned=('^\s*push\s*:' '^\s*pull_request_target\s*:')
-          bad=0
-          for f in "${files[@]}"; do
-            for pat in "${banned[@]}"; do
-              if grep -P -n "$pat" "$f" >/dev/null 2>&1; then
-                echo "::error file=$f::Forbidden trigger matched pattern: $pat"
-                bad=1
-              fi
-            done
-          done
-          exit $bad
+          $ErrorActionPreference = 'Stop'
+
+          # Patterns we forbid
+          $patterns = '^\s*push\s*:', '^\s*pull_request_target\s*:'
+
+          # Exclude the guard file(s) themselves (adjust names if you rename this file)
+          $excluded = @(
+            '.github/workflows/no-push-guard.yml',
+            '.github/workflows/no-push-guard.yaml',
+            '.github/workflows/check-forbidden-triggers.yml',
+            '.github/workflows/check-forbidden-triggers.yaml'
+          )
+
+          # Collect workflow files
+          $workflows = Get-ChildItem -Path .github/workflows -Include *.yml,*.yaml -File -Recurse `
+            | ForEach-Object { $_.FullName }
+
+          $bad = @()
+
+          foreach ($f in $workflows) {
+            # Make a repo-relative path for nice annotations
+            $rel = [IO.Path]::GetRelativePath($PWD, $f) -replace '\\','/'
+
+            if ($excluded -contains $rel) { continue }
+
+            $text = Get-Content -Raw -- $f
+
+            foreach ($pat in $patterns) {
+              if ($text -match $pat) {
+                Write-Error "::error file=$rel::Forbidden trigger matched pattern: $pat"
+                $bad += $rel
+              }
+            }
+          }
+
+          if ($bad.Count) {
+            Write-Host "Forbidden triggers found in:" -ForegroundColor Red
+            $bad | Sort-Object -Unique | ForEach-Object { " - $_" } | Write-Host
+            exit 1
+          } else {
+            Write-Host "No forbidden triggers detected." -ForegroundColor Green
+          }

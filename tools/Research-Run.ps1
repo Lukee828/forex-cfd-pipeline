@@ -1,3 +1,8 @@
+param()
+
+# Fail-fast & stricter semantics for PS7 scripts
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 3.0
 [CmdletBinding()]
 param(
   [string]$Symbols = "XAUUSD,US30,DE40",   # single string; we will split on commas/whitespace

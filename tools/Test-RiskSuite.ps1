@@ -1,3 +1,8 @@
+param()
+
+# Fail-fast & stricter semantics for PS7 scripts
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 3.0
 $ErrorActionPreference = "Stop"
 
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-SpreadGuard.ps1

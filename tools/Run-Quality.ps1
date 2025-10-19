@@ -1,3 +1,8 @@
+param()
+
+# Fail-fast & stricter semantics for PS7 scripts
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 3.0
 $ErrorActionPreference = "Stop"; Set-StrictMode -Version Latest
 $repo = (git rev-parse --show-toplevel) 2>$null
 if (-not $repo) { throw "Run inside the git repo root." }

@@ -1,0 +1,97 @@
+{
+  "total_count": 1,
+  "jobs": [
+    {
+      "id": 53105485180,
+      "run_id": 18626598455,
+      "workflow_name": "Tests (pytest)",
+      "head_branch": "fix/alpha-factory-exports",
+      "run_url": "https://api.github.com/repos/Lukee828/forex-cfd-pipeline/actions/runs/18626598455",
+      "run_attempt": 1,
+      "node_id": "CR_kwDOP5-Rzs8AAAAMXVVlfA",
+      "head_sha": "bd4b92bef8b31f0d12d06a508655f03a528596a8",
+      "url": "https://api.github.com/repos/Lukee828/forex-cfd-pipeline/actions/jobs/53105485180",
+      "html_url": "https://github.com/Lukee828/forex-cfd-pipeline/actions/runs/18626598455/job/53105485180",
+      "status": "completed",
+      "conclusion": "success",
+      "created_at": "2025-10-19T06:29:35Z",
+      "started_at": "2025-10-19T06:29:46Z",
+      "completed_at": "2025-10-19T06:30:18Z",
+      "name": "test",
+      "steps": [
+        {
+          "name": "Set up job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 1,
+          "started_at": "2025-10-19T06:29:46Z",
+          "completed_at": "2025-10-19T06:29:47Z"
+        },
+        {
+          "name": "Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 2,
+          "started_at": "2025-10-19T06:29:47Z",
+          "completed_at": "2025-10-19T06:29:48Z"
+        },
+        {
+          "name": "Set up Python",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 3,
+          "started_at": "2025-10-19T06:29:48Z",
+          "completed_at": "2025-10-19T06:29:49Z"
+        },
+        {
+          "name": "Install deps",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 4,
+          "started_at": "2025-10-19T06:29:49Z",
+          "completed_at": "2025-10-19T06:30:14Z"
+        },
+        {
+          "name": "Run pytest (smoke)",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 5,
+          "started_at": "2025-10-19T06:30:14Z",
+          "completed_at": "2025-10-19T06:30:15Z"
+        },
+        {
+          "name": "Post Set up Python",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 9,
+          "started_at": "2025-10-19T06:30:15Z",
+          "completed_at": "2025-10-19T06:30:16Z"
+        },
+        {
+          "name": "Post Checkout",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 10,
+          "started_at": "2025-10-19T06:30:16Z",
+          "completed_at": "2025-10-19T06:30:16Z"
+        },
+        {
+          "name": "Complete job",
+          "status": "completed",
+          "conclusion": "success",
+          "number": 11,
+          "started_at": "2025-10-19T06:30:16Z",
+          "completed_at": "2025-10-19T06:30:16Z"
+        }
+      ],
+      "check_run_url": "https://api.github.com/repos/Lukee828/forex-cfd-pipeline/check-runs/53105485180",
+      "labels": [
+        "ubuntu-latest"
+      ],
+      "runner_id": 1000001175,
+      "runner_name": "GitHub Actions 1000001175",
+      "runner_group_id": 0,
+      "runner_group_name": "GitHub Actions"
+    }
+  ]
+}

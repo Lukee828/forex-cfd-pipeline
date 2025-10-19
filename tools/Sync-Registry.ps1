@@ -1,3 +1,8 @@
+param()
+
+# Fail-fast & stricter semantics for PS7 scripts
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 3.0
 # PS7-only
 $ErrorActionPreference = "Stop"
 $root = (Get-Location).Path

@@ -1,0 +1,52 @@
+updated: 2025-10-19
+items:
+- acceptance:
+  - tools/Bootstrap-SelfTest.ps1 exit 0
+  - curl http://127.0.0.1:8000/health returns ok
+  id: PL-100
+  branch: feat/traffic-cop
+  type: task
+  depends_on: []
+  guardrails:
+  - No interactive PS7
+  - Python 3.11 only
+  - Black/Ruff clean
+  - Agent binds to 127.0.0.1 only
+  - No outbound network calls
+  priority: P0
+  owner: lukasz
+  pr: 
+  tags:
+  - agent
+  - guarded-generate
+  - localhost-only
+  chat_ref: this-thread
+  module: ai_lab/serve_agent.py
+  metrics_target: {}
+  created: 2025-10-18T12:03:14
+  area: infra
+  notes: Local-only agent with spec→retrieve→plan→diff→validate flow.
+  updated: 2025-10-18T12:03:14
+  title: Integrate traffic-cop agent (FastAPI)
+  status: spec
+- labels:
+  - infra
+  - mcp
+  status: in_progress
+  id: PL-20251019-095001
+  description: Prepare repo for MCP orchestration
+  created: 2025-10-19
+  priority: P2:high
+  title: Enable MCP adapter
+  owner: you
+- id: PL-20251019-095625
+  title: Enable MCP adapter
+  description: Prepare repo for MCP orchestration
+  owner: you
+  labels:
+  - infra
+  - mcp
+  status: planned
+  priority: P2:high
+  created: 2025-10-19
+version: 1
