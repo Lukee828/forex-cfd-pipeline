@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 # tools/MT5Api-Account.ps1
 [CmdletBinding()]
 param()

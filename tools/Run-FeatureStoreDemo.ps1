@@ -1,3 +1,4 @@
+param()
 #requires -Version 7.0
 param(
   [string]$DbPath = "runs/fs_demo/fs.db",

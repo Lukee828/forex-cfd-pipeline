@@ -1,3 +1,4 @@
+param()
 #requires -Version 7.0
 param()
 # No-op manifest updater to satisfy pre-commit. Extend later if needed.

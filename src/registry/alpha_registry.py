@@ -285,7 +285,13 @@ class AlphaRegistry:
                 s_median = srt[n // 2] if n % 2 == 1 else (srt[n // 2 - 1] + srt[n // 2]) / 2
             except Exception:
                 s_median = None
-            return {"metric": metric, "count": len(vals), "mean": s_mean, "max": s_max, "median": s_median}
+            return {
+                "metric": metric,
+                "count": len(vals),
+                "mean": s_mean,
+                "max": s_max,
+                "median": s_median,
+            }
 
     # --- Lineage ----------------------------------------------------------
 
@@ -312,6 +318,7 @@ class AlphaRegistry:
         try:
             import pandas as pd  # type: ignore
         except Exception:
+
             class _MiniDF(list):
                 @property
                 def shape(self):
@@ -353,4 +360,3 @@ class AlphaRegistry:
                 }
             )
         return pd.DataFrame(norm)
-

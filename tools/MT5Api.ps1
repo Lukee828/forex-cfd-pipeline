@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 [CmdletBinding()]
 param(
   [ValidateSet("ticks","account")]

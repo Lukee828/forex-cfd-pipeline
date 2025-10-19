@@ -1,3 +1,4 @@
+[CmdletBinding()]
 param(
   [switch]$SkipLint,
   [switch]$SkipFormat,
@@ -7,9 +8,12 @@ param(
   [string]  $Workflows   = '.github/workflows'
 )
 
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
+try { $PSStyle.OutputRendering = 'Ansi' } catch {}
+
 function Head($t){ Write-Host "`n=== $t ===" -ForegroundColor Cyan }
 function Fail($m){ Write-Error $m; exit 1 }
-$ErrorActionPreference = 'Stop'
 
 # Resolve this script's path to avoid self-flagging
 $SelfPath = (Resolve-Path -LiteralPath $MyInvocation.MyCommand.Path).Path
@@ -71,6 +75,7 @@ $guardSelf = @(
   (Join-Path $Workflows 'no-push-guard.yml'),
   (Join-Path $Workflows 'no-push-guard.yaml')
 ) | ForEach-Object { $_.Replace('\','/') }
+
 $wf = if (Test-Path $Workflows) { Get-ChildItem $Workflows -File -Include *.yml,*.yaml } else { @() }
 $badWf = @()
 foreach($f in $wf){

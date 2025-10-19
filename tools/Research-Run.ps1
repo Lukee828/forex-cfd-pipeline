@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 [CmdletBinding()]
 param(
   [string]$Symbols = "XAUUSD,US30,DE40",   # single string; we will split on commas/whitespace

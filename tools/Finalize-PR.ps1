@@ -1,3 +1,4 @@
+param()
 #requires -Version 7.0
 param([int]$Number)
 $ErrorActionPreference='Stop'

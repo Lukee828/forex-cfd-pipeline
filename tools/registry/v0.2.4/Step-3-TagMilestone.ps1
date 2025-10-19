@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 function Info($m){ Write-Host "[INFO] $m" -ForegroundColor Cyan }

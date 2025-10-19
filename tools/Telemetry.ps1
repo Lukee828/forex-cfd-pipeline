@@ -1,3 +1,4 @@
+param()
 # Simple telemetry helper; writes a line to .meta/telemetry.log and Step Summary in CI.
 param(
   [Parameter(Mandatory)][string]$Message

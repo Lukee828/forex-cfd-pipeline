@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 $ErrorActionPreference = "Stop"
 Write-Host "Running pre-commit on all files..." -ForegroundColor Cyan
 pre-commit run --all-files

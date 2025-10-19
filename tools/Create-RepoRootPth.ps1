@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 # tools/Create-RepoRootPth.ps1  (PS7)
 $ErrorActionPreference = "Stop"
 

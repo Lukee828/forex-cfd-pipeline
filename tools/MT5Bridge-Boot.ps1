@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 [CmdletBinding()] param([string]$Config = "configs/bridge_mt5.yaml")
 $ErrorActionPreference = "Stop"
 $root = (Get-Location).Path

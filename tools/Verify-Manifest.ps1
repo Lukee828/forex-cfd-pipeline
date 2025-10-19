@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 # tools/Verify-Manifest.ps1
 $ErrorActionPreference = 'Stop'
 

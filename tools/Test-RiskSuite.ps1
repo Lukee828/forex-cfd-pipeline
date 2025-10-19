@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 $ErrorActionPreference = "Stop"
 
 pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\Test-SpreadGuard.ps1

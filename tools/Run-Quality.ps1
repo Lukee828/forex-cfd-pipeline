@@ -1,3 +1,7 @@
+param()
+[CmdletBinding()]
+param()
+
 $ErrorActionPreference = "Stop"; Set-StrictMode -Version Latest
 $repo = (git rev-parse --show-toplevel) 2>$null
 if (-not $repo) { throw "Run inside the git repo root." }
