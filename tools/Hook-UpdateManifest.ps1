@@ -1,5 +1,6 @@
-[CmdletBinding()]
-param([string]$Root=".")
+param()
+Set-StrictMode -Version Latest
+$ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
