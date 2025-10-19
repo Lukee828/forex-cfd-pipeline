@@ -1,2 +1,17 @@
-*.yml  text eol=lf
-*.yaml text eol=lf
+# Text defaults
+* text=auto
+
+# Always LF in code/config
+*.py     text eol=lf
+*.ps1    text eol=lf
+*.psm1   text eol=lf
+*.psd1   text eol=lf
+*.yml    text eol=lf
+*.yaml   text eol=lf
+*.sh     text eol=lf
+*.md     text eol=lf
+
+# Binary
+*.png binary
+*.jpg binary
+*.zip binary
