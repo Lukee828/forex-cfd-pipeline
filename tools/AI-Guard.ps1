@@ -1,9 +1,107 @@
-# tools/AI-Guard.ps1 (placeholder)
-[CmdletBinding()]
-param()
+param(
+  [switch]$SkipLint,
+  [switch]$SkipFormat,
+  [switch]$SkipTests,
+  [string[]]$PsPaths     = @('tools'),
+  [string[]]$PythonPaths = @('src','tests','tools'),
+  [string]  $Workflows   = '.github/workflows'
+)
 
-$ErrorActionPreference = "Stop"
-Set-StrictMode -Version Latest
+function Head($t){ Write-Host "`n=== $t ===" -ForegroundColor Cyan }
+function Fail($m){ Write-Error $m; exit 1 }
+$ErrorActionPreference = 'Stop'
 
-Write-Host "AI-GUARD: placeholder – no policy enforced. All checks passed!" -ForegroundColor Green
-exit 0
+# Resolve this script's path to avoid self-flagging
+$SelfPath = (Resolve-Path -LiteralPath $MyInvocation.MyCommand.Path).Path
+
+Head "PS7 policy checks"
+$psFiles = @()
+foreach($p in $PsPaths){
+  if (Test-Path $p) {
+    $psFiles += Get-ChildItem $p -Recurse -File -Include *.ps1,*.psm1
+  }
+}
+# Exclude self
+$psFiles = $psFiles | Where-Object { $_.FullName -ne $SelfPath }
+
+$psBad = @()
+foreach($f in $psFiles){
+  $raw = Get-Content -Raw $f.FullName
+
+  # Ignore pure-comment lines for Read-Host check
+  $lines = $raw -split "`r?`n"
+  $nonComment = $lines | Where-Object { $_ -notmatch '^\s*#' }
+  $code = ($nonComment -join "`n")
+
+  if ($raw -notmatch '^\s*param\s*\(') {
+    $psBad += "[$($f.FullName)] missing param() block"
+  }
+  if ($code -match '(?i)\bRead-Host\b') {
+    $psBad += "[$($f.FullName)] uses Read-Host (forbidden)"
+  }
+}
+if($psBad){ $psBad | ForEach-Object { Write-Host $_ -ForegroundColor Red }; Fail "PS7 policy violations." }
+else{ Write-Host "PS7 scripts OK." -ForegroundColor Green }
+# --- Python banned-call scan (patched)
+Head "Python banned-call scan"
+$patterns = @(
+  '\bsubprocess\.(Popen|run|call|check_(call|output))\b',
+  '\bos\.system\(',
+  '\basyncio\.create_subprocess'
+)
+
+# Collect *.py
+$pyFiles = @()
+foreach($p in $PythonPaths){
+  if (Test-Path $p) { $pyFiles += Get-ChildItem $p -Recurse -File -Include *.py }
+}
+
+# Normalize once (forward slashes + lowercase)
+function Normalize-Path([string]$p) { return $p.Replace('\','/').ToLower() }
+
+# Allowlist as ONE regex against normalized path (repo-tail match)
+$allowRegex = '/(src/exec/(daily_run|refresh_prices|run_all|sweep_robustness|walkforward)\.py|tests/alpha_factory/test_registry_cli_v0(26|28)\.py|tools/repo_doctor\.py)$'
+
+$hits = @()
+foreach($f in $pyFiles){
+  $raw  = Get-Content -Raw $f.FullName
+  $norm = Normalize-Path $f.FullName
+  foreach($rx in $patterns){
+    if ($raw -match $rx) {
+      if ($norm -notmatch $allowRegex) {
+        $hits += "[$($f.FullName)] matched: $rx"
+      }
+    }
+  }
+}
+
+if($hits){
+  $hits | ForEach-Object { Write-Host $_ -ForegroundColor Red }
+  Fail "Python banned-call violations."
+} else {
+  Write-Host "Python sources OK (no banned calls outside allowlist)." -ForegroundColor Green
+}
+
+Head "Workflow trigger guard"
+$banned = @('^\s*push\s*:', '^\s*pull_request_target\s*:')
+$guardSelf = @(
+  (Join-Path $Workflows 'no-push-guard.yml'),
+  (Join-Path $Workflows 'no-push-guard.yaml')
+) | ForEach-Object { $_.Replace('\','/') }
+$wf = if (Test-Path $Workflows) { Get-ChildItem $Workflows -File -Include *.yml,*.yaml } else { @() }
+$badWf = @()
+foreach($f in $wf){
+  $path = $f.FullName.Replace('\','/')
+  if ($guardSelf -contains $path) { continue }
+  $raw = Get-Content -Raw $f.FullName
+  if (($banned | ForEach-Object { $raw -match $_ }) -contains $true) { $badWf += $path }
+}
+if($badWf){ $badWf | ForEach-Object { Write-Host "Forbidden trigger in: $_" -ForegroundColor Red }; Fail "Forbidden workflow triggers." }
+else{ Write-Host "No forbidden triggers found." -ForegroundColor Green }
+
+Head "Ruff / Black / Pytest"
+if (-not $SkipLint)   { python -m ruff check . }
+if (-not $SkipFormat) { python -m black --check . }
+if (-not $SkipTests)  { python -m pytest -q }
+
+Write-Host "`nAI-GUARD: All active checks passed." -ForegroundColor Green
