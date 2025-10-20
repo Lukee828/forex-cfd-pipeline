@@ -35,3 +35,15 @@ repos:
         args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","./tools/Hook-VerifyManifest.ps1"]
         pass_filenames: false
         stages: [pre-push]
+
+      - id: update-state-hash
+        name: Update state.json hash (PS7)
+        entry: pwsh -NoProfile -ExecutionPolicy Bypass -File tools/Update-StateHash.ps1
+        language: system
+        pass_filenames: false
+
+      - id: audit-state
+        name: Audit state (PS7)
+        entry: pwsh -NoProfile -ExecutionPolicy Bypass -File tools/Audit-State.ps1
+        language: system
+        pass_filenames: false

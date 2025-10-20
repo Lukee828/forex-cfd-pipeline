@@ -1,6 +1,6 @@
 # Audit Report
-UTC: 2025-10-20T17:51:37.9961924Z
+UTC: 2025-10-20T18:12:57.2680643Z
 Repo: C:/Users/speed/Desktop/forex-standalone
 
 ## Findings
-- OK: no issues found
+- state.json hash mismatch (calc b5331681c0dac4c6b657041d19ddc83a318a0ab5 != saved d00c3b22aef3af0064250d20151279af57e7c1df)
