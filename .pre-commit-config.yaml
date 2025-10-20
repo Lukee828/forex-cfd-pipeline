@@ -47,3 +47,4 @@ repos:
         entry: pwsh -NoProfile -ExecutionPolicy Bypass -File tools/Audit-State.ps1
         language: system
         pass_filenames: false
+        always_run: true
