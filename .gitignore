@@ -38,3 +38,4 @@ data/
 *.db
 artifacts_download/
 artifacts/
+_snapshot/
