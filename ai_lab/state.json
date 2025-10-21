@@ -3,12 +3,12 @@
   "repo_root": "C:/Users/speed/Desktop/forex-standalone",
   "phase": "v1.0-infra",
   "active_feature": "risk_governor",
-  "branch": "main",
-  "commit": "5e1ba7c",
-  "last_synced": "2025-10-21T19:26:42Z",
+  "branch": "smoke/chatops-20251021_230142",
+  "commit": "676656e",
+  "last_synced": "2025-10-21T21:01:45Z",
   "owner": "speed",
-  "ai_guard": "pass",
-  "notes": "audit green; snapshot + analyzer wired",
-  "hash": "acd8cf5fe97fdff3001f920edbad4ac29e8f1847",
-  "prev_hash": "0b67a91ce84cb11cc7652256be4a22b9fb18fe3a"
+  "ai_guard": "unknown",
+  "notes": "smoke open",
+  "hash": "4aa494236e8ad2338dce939ba536a1693aa21c37",
+  "prev_hash": "abec7e252a216dc211c9a17b9de11715511ce79e"
 }

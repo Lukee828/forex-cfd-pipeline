@@ -11,8 +11,15 @@ repos:
       - id: ruff-local
         name: ruff (system)
         entry: python -m ruff
-        args: ["check", "--no-cache", "--fix", "--exit-non-zero-on-fix",
-               "--extend-exclude", "\\.bak$|\\.(yml|yaml)$|build/|data/|updates_zip/|site/|docs/|\\.ruff_cache/|\\.precommit_cache/"]
+        args:
+          [
+            "check",
+            "--no-cache",
+            "--fix",
+            "--exit-non-zero-on-fix",
+            "--extend-exclude",
+            "\\.bak$|\\.(yml|yaml)$|build/|data/|updates_zip/|site/|docs/|\\.ruff_cache/|\\.precommit_cache/"
+          ]
         language: system
         types_or: [python]
         files: ^(src/|tests/)
@@ -32,6 +39,7 @@ repos:
             \.ruff_cache/|
             site/|
             docs/|
+            ai_lab/audit_report\.md$|
             .*\.parquet$|
             .*\.duckdb$|
             .*\.zip$|
@@ -55,6 +63,7 @@ repos:
             \.ruff_cache/|
             site/|
             docs/|
+            ai_lab/audit_report\.md$|
             .*\.parquet$|
             .*\.duckdb$|
             .*\.zip$|
@@ -87,6 +96,7 @@ repos:
         entry: pwsh -NoProfile -ExecutionPolicy Bypass -File tools/Update-StateHash.ps1
         language: system
         pass_filenames: false
+        stages: [pre-push]
 
       - id: audit-state
         name: Audit state (PS7)
@@ -94,11 +104,10 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+        stages: [pre-push]
 
   - repo: local
     hooks:
-        # ... your other local hooks ...
-
       - id: validate-handoff-strict
         name: Validate handoff (Strict) before push
         language: system
