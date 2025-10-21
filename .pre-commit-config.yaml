@@ -1,24 +1,71 @@
 repos:
-  - repo: https://github.com/psf/black
-    rev: 24.8.0
+  - repo: local
     hooks:
-      - id: black
+      - id: black-local
+        name: black (system)
+        entry: python -m black
+        language: system
+        types_or: [python]
+        exclude: ^(src/data/|build/|data/|updates_zip/|site/|docs/|\.ruff_cache/|\.precommit_cache/)
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.13.3
-    hooks:
-      - id: ruff
-        args: ["--fix", "--exit-non-zero-on-fix"]
+      - id: ruff-local
+        name: ruff (system)
+        entry: python -m ruff
+        args: ["check", "--no-cache", "--fix", "--exit-non-zero-on-fix",
+               "--extend-exclude", "\\.bak$|\\.(yml|yaml)$|build/|data/|updates_zip/|site/|docs/|\\.ruff_cache/|\\.precommit_cache/"]
+        language: system
+        types_or: [python]
+        files: ^(src/|tests/)
+        exclude: ^(src/data/|build/|data/|updates_zip/|site/|docs/|\.ruff_cache/|\.precommit_cache/)
 
-  - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
-    hooks:
-      - id: end-of-file-fixer
-      - id: trailing-whitespace
+      - id: eof-fixer-local
+        name: end-of-file-fixer (system)
+        entry: python -m pre_commit_hooks.end_of_file_fixer
+        language: system
+        types: [text]
+        exclude: >-
+          (?x)^(
+            updates_zip/|
+            data/|
+            build/|
+            \.precommit_cache/|
+            \.ruff_cache/|
+            site/|
+            docs/|
+            .*\.parquet$|
+            .*\.duckdb$|
+            .*\.zip$|
+            .*\.gz$|
+            .*\.exe$|
+            .*\.png$|
+            .*\.pdf$
+          )
+
+      - id: trailing-ws-local
+        name: trailing-whitespace (system)
+        entry: python -m pre_commit_hooks.trailing_whitespace_fixer
+        language: system
+        types: [text]
+        exclude: >-
+          (?x)^(
+            updates_zip/|
+            data/|
+            build/|
+            \.precommit_cache/|
+            \.ruff_cache/|
+            site/|
+            docs/|
+            .*\.parquet$|
+            .*\.duckdb$|
+            .*\.zip$|
+            .*\.gz$|
+            .*\.exe$|
+            .*\.png$|
+            .*\.pdf$
+          )
 
   - repo: local
     hooks:
-      # Update manifest on pre-commit (never fail CI here)
       - id: update-manifest
         name: update-manifest
         language: system
@@ -27,7 +74,6 @@ repos:
         pass_filenames: false
         stages: [pre-commit]
 
-      # Verify manifest on pre-push (may fail push if drift)
       - id: verify-manifest
         name: verify-manifest
         language: system
@@ -44,7 +90,7 @@ repos:
 
       - id: audit-state
         name: Audit state (PS7)
-        entry: pwsh -NoProfile -ExecutionPolicy Bypass -File tools/Audit-State.ps1
+        entry: pwsh -NoProfile -ExecutionPolicy Bypass -File tools/Hook-Audit.ps1
         language: system
         pass_filenames: false
         always_run: true

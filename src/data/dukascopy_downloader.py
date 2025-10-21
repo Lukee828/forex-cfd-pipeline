@@ -1,14 +1,11 @@
 """
 Dukascopy downloader (uses pip package `dukascopy-python` if present; also tries `dukascopy`).
 If the exact API differs in your environment, see the adapter notes below.
-
 CLI examples:
   # 1H bars (pull m1, resample to 1h)
   python -m src.data.dukascopy_downloader --symbol EURUSD --tf 1h --start 2022-01-01 --end 2022-12-31 --out data/prices_1h/EURUSD.parquet
-
   # 1D bars (pull m1, resample to 1d)
   python -m src.data.dukascopy_downloader --symbol XAUUSD --tf 1d --start 2020-01-01 --end 2024-12-31 --out data/prices_1d/XAUUSD.parquet
-
 Notes:
 - We fetch 1-minute data and resample to target TF for consistency.
 - Package detection order:
@@ -54,11 +51,11 @@ def _normalize(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
     # Try BID → plain → ASK naming
     o = pick("bidopen", "open", "askopen", "Open")
     h = pick("bidhigh", "high", "askhigh", "High")
-    low_ = pick("bidlow", "low", "asklow", "Low")
+    low_col = pick("bidlow", "low", "asklow", "Low")
     c = pick("bidclose", "close", "askclose", "Close")
     v = pick("volume", "Volume", "vol")
 
-    missing = [n for n, x in zip(["Open", "High", "Low", "Close"], [o, h, l, c]) if x is None]
+    missing = [n for n, x in zip(["Open", "High", "Low", "Close"], [o, h, low_col, c]) if x is None]
     if missing:
         raise ValueError(
             f"Missing OHLC columns in downloaded data: {missing}. "
@@ -73,7 +70,7 @@ def _normalize(df: pd.DataFrame, symbol: str) -> pd.DataFrame:
         {
             "Open": df[o].astype(float),
             "High": df[h].astype(float),
-            "Low": df[l].astype(float),
+            "Low": df[low_col].astype(float),
             "Close": df[c].astype(float),
             "Volume": df[v].astype(float),
         },
@@ -94,13 +91,15 @@ def _resample(df: pd.DataFrame, tf: str) -> pd.DataFrame:
     rule = {"1m": "1min", "5m": "5min", "1h": "1H", "1d": "1D"}.get(tf)
     if rule is None:
         raise ValueError("Unsupported tf; choose from 1m,5m,1h,1d")
+
     o = df["Open"].resample(rule).first()
     h = df["High"].resample(rule).max()
-    low_ = df["Low"].resample(rule).min()
+    low_res = df["Low"].resample(rule).min()
     c = df["Close"].resample(rule).last()
     v = df["Volume"].resample(rule).sum()
     sym = df["symbol"].resample(rule).last()
-    out = pd.concat([o, h, l, c, v, sym], axis=1)
+
+    out = pd.concat([o, h, low_res, c, v, sym], axis=1)
     out.columns = ["Open", "High", "Low", "Close", "Volume", "symbol"]
     return out.dropna(how="any")
 
@@ -185,7 +184,6 @@ def _fetch_with_library(symbol: str, start: str, end: str):
     inst_const = resolve_instrument(symbol)
     iv_m1 = interval_const("1m")
     bid_side = offer_side_bid()
-
     start_dt = pd.Timestamp(start, tz="UTC")
     end_dt = pd.Timestamp(end, tz="UTC")
 
@@ -201,6 +199,7 @@ def _fetch_with_library(symbol: str, start: str, end: str):
         df = df.rename(columns={"timestamp": "Date"})
     elif "time" in df.columns:
         df = df.rename(columns={"time": "Date"})
+
     # Normalize OHLCV naming if lowercase
     ren = {
         "open": "Open",
