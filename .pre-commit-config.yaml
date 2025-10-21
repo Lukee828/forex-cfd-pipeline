@@ -94,3 +94,15 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+
+  - repo: local
+    hooks:
+        # ... your other local hooks ...
+
+      - id: validate-handoff-strict
+        name: Validate handoff (Strict) before push
+        language: system
+        entry: pwsh
+        args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","./tools/Hook-PrePush-Handoff.ps1"]
+        pass_filenames: false
+        stages: [pre-push]
