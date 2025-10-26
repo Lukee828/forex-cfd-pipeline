@@ -1,0 +1,31 @@
+name: smoke-push
+
+on:
+  push:
+    branches:
+      - smoke/**    # <-- your branch pattern
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show commit + tree
+        run: |
+          git rev-parse --short HEAD
+          ls -la
+
+      - name: Print ai_lab/state.json (if present)
+        run: |
+          if [ -f ai_lab/state.json ]; then
+            echo "----- ai_lab/state.json -----"
+            cat ai_lab/state.json
+          else
+            echo "state.json not found"
+          fi

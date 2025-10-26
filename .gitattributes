@@ -20,3 +20,12 @@
 *.ps1 text eol=lf
 *.yml text eol=lf
 *.yaml text eol=lf
+
+*.md  text eol=lf
+*.csv text eol=lf
+*           text=auto
+*.ps1       text eol=lf
+*.md        text eol=lf
+*.csv       text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
