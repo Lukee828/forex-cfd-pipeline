@@ -54,3 +54,5 @@ updates_zip/
 *.exe
 *.png
 *.pdf
+
+tools/*.bak
