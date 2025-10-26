@@ -2,13 +2,13 @@
   "project": "Alpha Factory",
   "repo_root": "C:/Users/speed/Desktop/forex-standalone",
   "phase": "v1.0-infra",
-  "active_feature": "risk_governor",
+  "active_feature": "chatops-20251021_230142",
   "branch": "smoke/chatops-20251021_230142",
-  "commit": "4930b08",
-  "last_synced": "2025-10-26T14:54:45Z",
+  "commit": "e727b0b",
+  "last_synced": "2025-10-26T15:11:32Z",
   "owner": "speed",
   "ai_guard": "unknown",
-  "notes": "session open",
-  "hash": "34f2a8f1faaa2c8013a72bf8c30a47d2b2062e65",
-  "prev_hash": "d12d73e7437d85d340e15a04faf8fcaf6b8c258b"
+  "notes": "session update (smoke/chatops-20251021_230142@e727b0b)",
+  "hash": "1a39a7caa273a70c01482caf7713363103dae60b",
+  "prev_hash": "52c453d1b49c8bc7e6f90cddd10c0530612baffb"
 }
