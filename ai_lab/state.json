@@ -4,11 +4,11 @@
   "phase": "v1.0-infra",
   "active_feature": "risk_governor",
   "branch": "smoke/chatops-20251021_230142",
-  "commit": "676656e",
-  "last_synced": "2025-10-21T21:01:45Z",
+  "commit": "4930b08",
+  "last_synced": "2025-10-26T14:54:45Z",
   "owner": "speed",
   "ai_guard": "unknown",
-  "notes": "smoke open",
-  "hash": "4aa494236e8ad2338dce939ba536a1693aa21c37",
-  "prev_hash": "abec7e252a216dc211c9a17b9de11715511ce79e"
+  "notes": "session open",
+  "hash": "34f2a8f1faaa2c8013a72bf8c30a47d2b2062e65",
+  "prev_hash": "d12d73e7437d85d340e15a04faf8fcaf6b8c258b"
 }

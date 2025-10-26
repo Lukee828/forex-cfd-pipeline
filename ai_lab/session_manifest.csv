@@ -1,2 +1,8 @@
 timestamp,branch,feature,commit,ai_guard,pytest,status,summary,log_path
 2025-10-20T17:36:43.5433168Z,main,,710e381,unknown,,in-progress,"",C:/Users/speed/Desktop/forex-standalone/ai_lab/session_logs/2025-10-20_17-36-43-session.md
+2025-10-21T19:11:24Z,main,risk_governor,5e1ba7c,unknown,na,open,""re-synced state; snapshot taken"",C:\Users\speed\Desktop\forex-standalone\ai_lab\session_logs\2025-10-21_19-11-24-main-risk_governor.md
+2025-10-21T19:14:17Z,main,risk_governor,5e1ba7c,pass,na,merged,"session closed",C:\Users\speed\Desktop\forex-standalone\ai_lab\session_logs\2025-10-21_19-14-17-main-risk_governor.md
+2025-10-21T20:28:03Z,main,risk_governor,1612d50,pass,na,merged,"session closed",C:\Users\speed\Desktop\forex-standalone\ai_lab\session_logs\2025-10-21_20-28-03-main-risk_governor.md
+2025-10-21T21:01:43Z,smoke/chatops-20251021_230142,risk_governor,d81e05a,pass,na,merged,"smoke close",C:\Users\speed\Desktop\forex-standalone\ai_lab\session_logs\2025-10-21_21-01-43-smoke-chatops-20251021_230142-risk_governor.md
+2025-10-21T21:10:05Z,smoke/chatops-20251021_231004,risk_governor,d81e05a,pass,na,merged,"smoke close",C:\Users\speed\Desktop\forex-standalone\ai_lab\session_logs\2025-10-21_21-10-05-smoke-chatops-20251021_231004-risk_governor.md
+2025-10-26T14:54:43Z,smoke/chatops-20251021_230142,risk_governor,4930b08,unknown,na,open,""session open"",C:\Users\speed\Desktop\forex-standalone\ai_lab\session_logs\2025-10-26_14-54-43-smoke-chatops-20251021_230142-risk_governor.md
