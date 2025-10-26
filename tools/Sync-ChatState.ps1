@@ -14,16 +14,16 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-function Git-Root      { (git rev-parse --show-toplevel).Trim() }
-function Git-Branch    { (git rev-parse --abbrev-ref HEAD).Trim() }
-function Git-ShortSHA  { (git rev-parse --short HEAD).Trim() }
+function Get-GitRoot      { (git rev-parse --show-toplevel).Trim() }
+function Get-GitBranch    { (git rev-parse --abbrev-ref HEAD).Trim() }
+function Get-GitShortSha  { (git rev-parse --short HEAD).Trim() }
 function Sha1-String([string]$s) {
   $sha1  = [System.Security.Cryptography.SHA1]::Create()
   $bytes = [System.Text.Encoding]::UTF8.GetBytes($s)
   ($sha1.ComputeHash($bytes) | ForEach-Object { $_.ToString('x2') }) -join ''
 }
 
-$root = Git-Root
+$root = Get-GitRoot
 if (-not $root) { throw "Not inside a Git repo." }
 
 $ai        = Join-Path $root 'ai_lab'
@@ -37,18 +37,18 @@ $prevPath  = Join-Path $ai   'state.prev'
 if ($Lock) {
   $by = ($Owner ? $Owner : $env:USERNAME)
   $lockObj = [ordered]@{
-    branch    = Git-Branch
+    branch    = Get-GitBranch
     locked_by = $by
     locked_at = (Get-Date).ToUniversalTime().ToString('s') + 'Z'
   } | ConvertTo-Json -Compress
   $lockObj | Set-Content -Encoding UTF8 $lockPath
-  Write-Host "🔒 Locked by $by on branch $(Git-Branch)" -ForegroundColor Yellow
+  Write-Host "🔒 Locked by $by on branch $(Get-GitBranch)" -ForegroundColor Yellow
   exit 0
 }
 
 if ($Unlock) {
   $lockObj = [ordered]@{
-    branch    = Git-Branch
+    branch    = Get-GitBranch
     locked_by = ''
     locked_at = ''
   } | ConvertTo-Json -Compress
@@ -76,8 +76,8 @@ if ($Owner)   { $state.owner          = $Owner }
 if ($AiGuard) { $state.ai_guard       = $AiGuard }
 if ($Notes)   { $state.notes          = $Notes }
 
-$commitEff         = if ($Commit) { $Commit.Trim() } else { Git-ShortSHA }
-$state.branch      = Git-Branch
+$commitEff         = if ($Commit) { $Commit.Trim() } else { Get-GitShortSha }
+$state.branch      = Get-GitBranch
 $state.commit      = $commitEff
 $state.last_synced = (Get-Date).ToUniversalTime().ToString('s') + 'Z'
 $state.prev_hash   = $oldHash
