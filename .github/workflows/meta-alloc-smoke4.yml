@@ -10,8 +10,20 @@ jobs:
     env:
       PYTHONPATH: src
     steps:
-steps:
       - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('.github/ci-requirements.txt','requirements.txt','.github/constraints-ci.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-steps:
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('.github/ci-requirements.txt','requirements.txt','.github/constraints-ci.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-- name: Cache pip
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
