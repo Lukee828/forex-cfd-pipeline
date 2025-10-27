@@ -1,22 +1,23 @@
 # 🧩 Pre-Commit / Pre-Push Automation Overview
 
-This repo uses pre-commit for two stages:
+Generated automatically from **.pre-commit-config.yaml**.
 
-| Stage | Purpose | Hooks | When |
-|---|---|---|---|
-| **pre-commit** | Formatting, linting, and writers. | `black-local`, `ruff-local`, `end-of-file-fixer`, `trailing-whitespace`, `update-manifest`, `update-state-hash` | On every `git commit` |
-| **pre-push** | Validation/audit/risk guards (no writers). | `verify-manifest`, `audit-state`, `handoff-validate`, `risk-governor` | On every `git push` |
+| Stage | Purpose | Hooks | Runs |
+|-------|----------|--------|------|
+| **pre-commit** | Formatting + linting + writers. | $((black-local -join ', ')) | On every git commit |
+| **pre-push** | Validation / audit / risk guards. | $(( -join ', ')) | On every git push |
+
+---
 
 ## 🔁 Flow Summary
-Commit → format/lint/fixers + manifest + state-hash  
-Push   → verify-manifest + audit + handoff + risk
+Commit → format / lint / fixers / manifest / state-hash  
+Push → verify manifest / audit / handoff / risk governor
 
-## Handy commands
-- Run commit-time hooks: `pre-commit run -a -v`
-- Run push-time hooks: `pre-commit run --hook-stage pre-push -a -v`
-- Reinstall hooks: `pre-commit clean; pre-commit install --hook-type pre-commit --hook-type pre-push --overwrite`
+---
 
-## Common issues
-- **Here-strings**: terminator `'@` must be at column 1 **and alone** on its line.
-- **Line endings**: `.gitattributes` enforces LF for scripts/yaml/markdown to avoid churn.
-- **PowerShell policy**: call scripts via `pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\Script.ps1`.
+## 📂 Hook Script Locations
+All hooks live under 	ools/ and are PowerShell 7 only.
+
+---
+
+_Last regenerated: 2025-10-27 14:59:04 (UTC+1 Warsaw)_
