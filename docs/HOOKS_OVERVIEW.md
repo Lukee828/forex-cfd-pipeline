@@ -1,23 +1,22 @@
-# 🧩 Pre-Commit / Pre-Push Automation Overview
+# Pre-Commit / Pre-Push Automation Overview
 
-Generated automatically from **.pre-commit-config.yaml**.
+## Stages
 
-| Stage | Purpose | Hooks | Runs |
-|-------|----------|--------|------|
-| **pre-commit** | Formatting + linting + writers. | $((black-local -join ', ')) | On every git commit |
-| **pre-push** | Validation / audit / risk guards. | $(( -join ', ')) | On every git push |
-
----
-
-## 🔁 Flow Summary
-Commit → format / lint / fixers / manifest / state-hash  
-Push → verify manifest / audit / handoff / risk governor
+| Stage | Purpose | Hooks | When |
+|------|---------|-------|------|
+| **pre-commit** | Formatting, linting, and manifest/state writers. | `black-local`, `ruff-local`, `end-of-file-fixer`, `trailing-whitespace`, `update-manifest`, `update-state-hash` | Before every `git commit` |
+| **pre-push**   | Validation, audit, and risk guards.               | `verify-manifest`, `audit-state`, `handoff-validate`, `risk-governor` | Before every `git push` |
 
 ---
 
-## 📂 Hook Script Locations
-All hooks live under 	ools/ and are PowerShell 7 only.
+## Flow Summary
+Commit → format / lint / fixers / manifest / state-hash
+Push   → verify manifest / audit / handoff / risk governor
 
 ---
 
-_Last regenerated: 2025-10-27 14:59:04 (UTC+1 Warsaw)_
+## Hook Script Locations
+All hook scripts live under `tools/` and are PowerShell 7 only.
+
+---
+_Last regenerated: 2025-10-27 15:26:12 (Local)_
