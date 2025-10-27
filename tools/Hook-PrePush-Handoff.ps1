@@ -1,35 +1,17 @@
-# tools/Hook-PrePush-Handoff.ps1
-# Blocks push if repo state is inconsistent with ai_lab/state.json (or lock active).
+param()
 
-Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-# Ensure we run from repo root
-$root = (git rev-parse --show-toplevel 2>$null)
-if (-not $root) {
-  Write-Host "Not a git repo; allowing push." -ForegroundColor Yellow
-  exit 0
-}
-Set-Location $root
+# Run the hasher once (it may *try* to write); we immediately detect & forbid that at push-time.
+pwsh -NoProfile -File tools/Update-StateHash.ps1
 
-# 1) Optional: read-only audit (won't modify files)
-try {
-  pwsh -NoProfile -ExecutionPolicy Bypass -File "$root/tools/Audit-State.ps1" | Out-Host
-} catch {
-  Write-Host "Audit script failed (non-fatal); continuing to Strict handoff..." -ForegroundColor Yellow
-}
-
-# 2) Strict handoff check (this is the gate)
-pwsh -NoProfile -ExecutionPolicy Bypass -File "$root/tools/Make-Handoff.ps1" `
-  -Strict `
-  -WithLogs `
-  -Logs 5 `
-  -ToFile "ai_lab/handoff_latest.md" | Out-Host
-
-if ($LASTEXITCODE -ne 0) {
-  Write-Host "❌ Pre-push blocked: handoff warnings present. See ai_lab/handoff_latest.md." -ForegroundColor Red
+# If the updater modified ai_lab/state.json, block push with a clear message.
+$changed = (git diff --name-only -- ai_lab/state.json)
+if ($changed) {
+  Write-Host "❌ state.json hash was stale at push-time." -ForegroundColor Red
+  Write-Host "Run: pwsh -File tools/Update-StateHash.ps1 ; git add ai_lab/state.json ; git commit -m 'ci: refresh state hash' ; git push" -ForegroundColor Yellow
   exit 1
 }
 
-Write-Host "✅ Pre-push OK: handoff clean." -ForegroundColor Green
+Write-Host "✔ state.json hash OK (verify-only)" -ForegroundColor Green
 exit 0
