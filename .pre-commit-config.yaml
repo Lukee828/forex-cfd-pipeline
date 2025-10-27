@@ -92,7 +92,7 @@ repos:
         entry: pwsh
         args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","tools/Update-StateHash.ps1"]
         pass_filenames: false
-        stages: [commit]
+        stages: [pre-commit]
 
       - id: audit-state
         name: Audit state (PS7)
