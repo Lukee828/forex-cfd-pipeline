@@ -58,3 +58,7 @@ updates_zip/
 tools/*.bak
 
 tools/*.bak
+.pre-commit-config.yaml.BACKUP
+.pre-commit-config.yaml.BROKEN
+ai_lab/risk/
+.pre-commit-config.yaml.BAK-*
