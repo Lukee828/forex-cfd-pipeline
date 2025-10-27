@@ -100,3 +100,40 @@ PY
           path: artifacts/allocations/*.csv
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Export allocations (resilient)
+        if: always()
+        run: |
+          @'
+          import os, sys, time, pathlib, traceback
+          ts = time.strftime('%Y%m%d_%H%M%S')
+          outdir = pathlib.Path('artifacts/allocations'); outdir.mkdir(parents=True, exist_ok=True)
+          csv = outdir / f"{ts}_alloc.csv"
+          err = outdir / f"{ts}_alloc_error.txt"
+          try:
+              # Try real allocator (if available on runner)
+              from alpha_factory.meta_allocator import MetaAllocator, AllocatorConfig
+              metrics = {
+                  'TF':  {'sharpe': 1.2, 'dd': 0.06},
+                  'MR':  {'sharpe': 1.0, 'dd': 0.05},
+                  'VOL': {'sharpe': 0.8, 'dd': 0.04},
+              }
+              w = MetaAllocator(AllocatorConfig()).allocate(metrics)
+          except Exception as e:
+              # Fallback: equal weights + write error trace for debugging
+              traceback.print_exc()
+              err.write_text(traceback.format_exc(), encoding='utf-8')
+              keys = ['TF','MR','VOL']
+              w = {k: 1/len(keys) for k in keys}
+          # Always emit a CSV so upload has something to collect
+          csv.write_text('Sleeve,Weight\\n' + '\\n'.join(f"{k},{v}" for k,v in w.items()), encoding='utf-8')
+          print("wrote", csv)
+          '@ | python -
+      - name: Upload allocation CSVs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allocations
+          path: artifacts/allocations/*.csv
+          if-no-files-found: warn
+          retention-days: 7
