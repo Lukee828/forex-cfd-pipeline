@@ -10,7 +10,14 @@ jobs:
     env:
       PYTHONPATH: src
     steps:
-      - name: Checkout
+steps:
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('.github/ci-requirements.txt','requirements.txt','.github/constraints-ci.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-
         uses: actions/checkout@v4
 
       - name: Set up Python
