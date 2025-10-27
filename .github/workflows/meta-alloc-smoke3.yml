@@ -1,0 +1,47 @@
+name: Meta Allocator Smoke
+
+on:
+  workflow_dispatch: {}
+  pull_request: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      PYTHONPATH: src
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt -c .github/constraints-ci.txt
+          python - <<EOF
+import sys; import importlib.util as u
+print("✅ numpy?", u.find_spec("numpy") is not None)
+print("✅ pandas?", u.find_spec("pandas") is not None)
+EOF
+
+      - name: Run smoke test
+        run: pytest -q tests/alpha_factory/test_meta_allocator_smoke.py -vv --maxfail=1
+
+      - name: Export allocations (demo, no heredoc)
+        run: >
+          python -c "import time, pathlib, json;
+          w={'TF':0.4,'MR':0.35,'VOL':0.25};
+          p=pathlib.Path('artifacts/allocations'); p.mkdir(parents=True, exist_ok=True);
+          ts=time.strftime('%Y%m%d_%H%M%S'); f=p/f'{ts}_alloc.csv';
+          f.write_text('Sleeve,Weight\n'+'\n'.join(f'{k},{v}' for k,v in w.items()), encoding='utf-8');
+          print('wrote', f)"
+
+      - name: Upload allocation CSVs
+        uses: actions/upload-artifact@v4
+        with:
+          name: allocations
+          path: artifacts/allocations/*.csv
