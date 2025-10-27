@@ -1,7 +1,7 @@
 name: Meta Allocator Smoke (v7)
 on:
   workflow_dispatch: {}
-  # pull_request: {}
+  pull_request: [opened, synchronize, reopened]
 
 jobs:
   test:
