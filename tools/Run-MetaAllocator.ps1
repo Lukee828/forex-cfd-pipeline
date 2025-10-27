@@ -22,12 +22,15 @@ if (!(Test-Path $Prev))    { throw "Missing prev: $Prev" }
 if (!(Test-Path $Corr))    { throw "Missing corr: $Corr" }
 if (!(Test-Path $Config))  { throw "Missing config: $Config" }
 
+# ensure src discoverable (redundant with shim, but helps when -m works)
+$env:PYTHONPATH = "$PWD\src"
+
 # build temp shim that forces src on sys.path and runs the module as __main__
 $tmp = Join-Path $PWD "tools/_tmp_run_meta.py"
-$src = Join-Path $PWD "src"
+$src = (Resolve-Path (Join-Path $PWD "src")).Path
 $pyLines = @()
 $pyLines += 'import sys, runpy, os'
-$pyLines += 'sys.path.insert(0, os.path.abspath(r""))'
+$pyLines += 'sys.path.insert(0, r"")'
 $pyLines += 'runpy.run_module("alpha_factory.runner", run_name="__main__")'
 Set-Content -Encoding UTF8 -Path $tmp -Value $pyLines
 
