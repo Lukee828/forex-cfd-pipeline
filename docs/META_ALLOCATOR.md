@@ -15,3 +15,10 @@ A lightweight allocator that blends sleeves with EWMA scoring, a correlation gov
 - This is infra-ready and testable; extend `_score_bayesian` later (conformal / BOCPD gating).
 - Correlation governor dampens both sleeves above `corr_cap` with linear strength.
 - Turnover penalty shrinks moves by `lam * |w - prev|`.
+
+
+Local:
+  pwsh tools/Run-MetaAllocator.ps1
+  pwsh tools/Export-Allocations.ps1
+CI:
+  gh workflow run .github/workflows/ci-meta.yml --ref main

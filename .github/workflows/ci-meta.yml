@@ -30,6 +30,16 @@ jobs:
           PYTHONPATH: src
         run: |
           pwsh -File tools/Export-Allocations.ps1 -Repo .
+      # .github/workflows/ci-meta.yml (inside the existing job, after “Export allocations (demo)”)
+      - name: Generate risk report (with allocator)
+        run: pwsh -File tools/Risk-Report.ps1 -OutPath artifacts/reports/latest.md -IncludeAlloc
+
+      - name: Upload risk report
+        uses: actions/upload-artifact@v4
+        with:
+          name: risk-report
+          path: artifacts/reports/latest.md
+          if-no-files-found: error
       - name: Upload allocation CSVs
         uses: actions/upload-artifact@v4
         with:

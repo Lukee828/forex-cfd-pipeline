@@ -62,3 +62,4 @@ tools/*.bak
 .pre-commit-config.yaml.BROKEN
 ai_lab/risk/
 .pre-commit-config.yaml.BAK-*
+artifacts/
