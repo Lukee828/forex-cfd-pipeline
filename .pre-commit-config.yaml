@@ -13,15 +13,7 @@ repos:
       - id: ruff-local
         name: ruff (system)
         entry: python -m ruff
-        args:
-          [
-            "check",
-            "--no-cache",
-            "--fix",
-            "--exit-non-zero-on-fix",
-            "--extend-exclude",
-            "\\.bak$|\\.(yml|yaml)$|build/|data/|updates_zip/|site/|docs/|\\.ruff_cache/|\\.precommit_cache/",
-          ]
+        args: ["check","--no-cache","--fix","--exit-non-zero-on-fix","--extend-exclude","\\.bak$|\\.(yml|yaml)$|build/|data/|updates_zip/|site/|docs/|\\.ruff_cache/|\\.precommit_cache/"]
         language: system
         types_or: [python]
         files: ^(src/|tests/)
@@ -74,7 +66,7 @@ repos:
           )
 
   # -------------------------------
-  # Manifest & metadata
+  # Writers / Auditors
   # -------------------------------
   - repo: local
     hooks:
@@ -85,6 +77,7 @@ repos:
         args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","./tools/Hook-UpdateManifest.ps1"]
         pass_filenames: false
         stages: [pre-commit]
+
       - id: verify-manifest
         name: verify-manifest
         language: system
@@ -93,44 +86,42 @@ repos:
         pass_filenames: false
         stages: [pre-push]
 
-  # -------------------------------
-  # State hash writer (pre-commit) + audit (pre-push)
-  # -------------------------------
-  - repo: local
-    hooks:
       - id: update-state-hash
         name: Update state.json hash (PS7)
-        entry: pwsh -NoProfile -ExecutionPolicy Bypass -File tools/Update-StateHash.ps1
         language: system
+        entry: pwsh
+        args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","tools/Update-StateHash.ps1"]
         pass_filenames: false
-        stages: [pre-commit]
+        stages: [pre-push]
+
       - id: audit-state
         name: Audit state (PS7)
+        language: system
         entry: pwsh
         args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","./tools/Hook-Audit.ps1"]
-        language: system
         pass_filenames: false
         always_run: true
         stages: [pre-push]
 
   # -------------------------------
-  # Push-time guards (read-only)
+  # Guards (push-time)
   # -------------------------------
   - repo: local
     hooks:
       - id: handoff-validate
         name: Validate handoff (push-time, no-write)
-        entry: pwsh
-        args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","tools/Hook-Handoff.ps1","-Validate","-NonStrict"]
         language: system
+        entry: pwsh
+        args: ['-NoProfile','-ExecutionPolicy','Bypass','-File','tools/Hook-Handoff.ps1','-Validate','-NonStrict']
         pass_filenames: false
         always_run: true
         stages: [pre-push]
+
       - id: risk-governor
         name: Risk Governor (push-time)
-        entry: pwsh
-        args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","tools/Hook-PrePush-Risk.ps1"]
         language: system
+        entry: pwsh
+        args: ['-NoProfile','-ExecutionPolicy','Bypass','-File','tools/Hook-PrePush-Risk.ps1']
         pass_filenames: false
         always_run: true
         stages: [pre-push]
