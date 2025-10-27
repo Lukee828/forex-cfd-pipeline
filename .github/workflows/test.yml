@@ -35,9 +35,29 @@ jobs:
 
       # --- Meta Allocator smoke: always export, even if pytest failed ---
       - name: Export allocations (demo)
-        if: always()
-        run: |
-          python - <<'PY'
+  if: always()
+  run: |
+    python - <<'PY'
+import time, pathlib, traceback, sys
+ts = time.strftime('%Y%m%d_%H%M%S')
+outdir = pathlib.Path('artifacts/allocations'); outdir.mkdir(parents=True, exist_ok=True)
+csv = outdir / f'{ts}_alloc.csv'
+try:
+    from alpha_factory.meta_allocator import MetaAllocator, AllocatorConfig
+    metrics = {'TF': {'sharpe': 1.2, 'dd': 0.06},
+               'MR': {'sharpe': 1.0, 'dd': 0.05},
+               'VOL': {'sharpe': 0.8, 'dd': 0.04}}
+    w = MetaAllocator(AllocatorConfig()).allocate(metrics)
+    csv.write_text('Sleeve,Weight\n' + '\n'.join(f'{k},{v}' for k,v in w.items()), encoding='utf-8')
+    print('wrote', csv)
+except Exception:
+    err = outdir / f'{ts}_alloc_error.txt'
+    err.write_text('EXPORT_FAILED\\n' + traceback.format_exc(), encoding='utf-8')
+    # Always produce a minimal CSV so artifact upload finds a file
+    csv.write_text('Sleeve,Weight\nERROR,0', encoding='utf-8')
+    print('wrote', csv, 'with ERROR; see', err)
+    sys.exit(0)
+PYthon - <<'PY'
 import time, pathlib
 from alpha_factory.meta_allocator import MetaAllocator, AllocatorConfig
 metrics = {'TF': {'sharpe': 1.2, 'dd': 0.06},
