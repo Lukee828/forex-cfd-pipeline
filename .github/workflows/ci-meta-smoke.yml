@@ -36,7 +36,7 @@ w = MetaAllocator(AllocatorConfig()).allocate(metrics)
 ts = time.strftime('%Y%m%d_%H%M%S')
 outdir = pathlib.Path('artifacts/allocations'); outdir.mkdir(parents=True, exist_ok=True)
 csv = outdir / f'{ts}_alloc.csv'
-csv.write_text('Sleeve,Weight\\n' + '\\n'.join(f'{k},{v}' for k,v in w.items()), encoding='utf-8')
+csv.write_text('Sleeve,Weight\n' + '\n'.join(f'{k},{v}' for k,v in w.items()), encoding='utf-8')
 print('wrote', csv)
 PY
 
