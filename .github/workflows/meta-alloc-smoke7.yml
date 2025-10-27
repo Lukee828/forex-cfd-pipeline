@@ -1,0 +1,8 @@
+name: Meta Allocator Smoke (v7)
+on:
+  workflow_dispatch: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo ping-ok
