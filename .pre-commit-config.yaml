@@ -93,14 +93,16 @@ repos:
 
       - id: update-state-hash
         name: Update state.json hash (PS7)
-        entry: pwsh -NoProfile -ExecutionPolicy Bypass -File tools/Update-StateHash.ps1
+        entry: pwsh
+        args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","./tools/Update-StateHash.ps1"]
         language: system
         pass_filenames: false
         stages: [pre-push]
 
       - id: audit-state
         name: Audit state (PS7)
-        entry: pwsh -NoProfile -ExecutionPolicy Bypass -File tools/Hook-Audit.ps1
+        entry: pwsh
+        args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","./tools/Hook-Audit.ps1"]
         language: system
         pass_filenames: false
         always_run: true
@@ -108,10 +110,20 @@ repos:
 
   - repo: local
     hooks:
-      - id: validate-handoff-strict
-        name: Validate handoff (Strict) before push
-        language: system
+      - id: handoff-validate
+        name: Validate handoff (push-time, no-write)
         entry: pwsh
-        args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","./tools/Hook-PrePush-Handoff.ps1"]
+        args: ['-NoProfile','-ExecutionPolicy','Bypass','-File','tools/Hook-Handoff.ps1','-Validate','-NonStrict']
+        language: system
         pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+
+      - id: risk-governor
+        name: Risk Governor (push-time)
+        entry: pwsh
+        args: ['-NoProfile','-ExecutionPolicy','Bypass','-File','tools/Hook-PrePush-Risk.ps1']
+        language: system
+        pass_filenames: false
+        always_run: true
         stages: [pre-push]
