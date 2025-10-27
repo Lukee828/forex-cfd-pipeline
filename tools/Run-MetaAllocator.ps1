@@ -22,21 +22,14 @@ if (!(Test-Path $Prev))    { throw "Missing prev: $Prev" }
 if (!(Test-Path $Corr))    { throw "Missing corr: $Corr" }
 if (!(Test-Path $Config))  { throw "Missing config: $Config" }
 
-# ensure src discoverable (helps with -m as well)
-$env:PYTHONPATH = (Join-Path $PWD "src")
+# ensure src is discoverable
+$env:PYTHONPATH = (Resolve-Path (Join-Path $PWD "src")).Path
+Write-Host "PYTHONPATH=$env:PYTHONPATH"
 
-# build temp shim that forces src on sys.path and runs the module as __main__
-$tmp = Join-Path $PWD "tools/_tmp_run_meta.py"
-$srcAbs = (Resolve-Path (Join-Path $PWD "src")).Path
-$pyLines = @()
-$pyLines += 'import sys, runpy, os'
-$pyLines += 'sys.path.insert(0, r"")'
-$pyLines += 'runpy.run_module("alpha_factory.runner", run_name="__main__")'
-Set-Content -Encoding UTF8 -Path $tmp -Value $pyLines
-Write-Host "---- shim ----"; Get-Content $tmp; Write-Host "--------------"
+# quick import probe (optional, fast)
+& $py -c "import sys; import importlib; sys.path.insert(0, r'$($env:PYTHONPATH)'.strip()); importlib.import_module('alpha_factory.runner'); print('import_ok')"
+if ($LASTEXITCODE -ne 0) { throw "import probe failed" }
 
-# pass CLI args to the runner through the shim
-& $py $tmp --metrics $Metrics --prev $Prev --corr $Corr --config $Config
-$code = $LASTEXITCODE
-Remove-Item $tmp -ErrorAction SilentlyContinue
-if ($code -ne 0) { throw "runner failed ($code)" }
+# run the runner as a module
+& $py -m alpha_factory.runner --metrics $Metrics --prev $Prev --corr $Corr --config $Config
+if ($LASTEXITCODE -ne 0) { throw "runner failed ($LASTEXITCODE)" }
