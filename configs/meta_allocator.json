@@ -1,0 +1,9 @@
+{
+  "mode": "ewma",
+  "ewma_alpha": 0.30,
+  "turnover_penalty": 0.05,
+  "min_weight": 0.0,
+  "max_weight": 1.0,
+  "corr_cap": 0.60,
+  "corr_governor_strength": 0.50
+}
