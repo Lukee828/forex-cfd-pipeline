@@ -22,14 +22,14 @@ if (!(Test-Path $Prev))    { throw "Missing prev: $Prev" }
 if (!(Test-Path $Corr))    { throw "Missing corr: $Corr" }
 if (!(Test-Path $Config))  { throw "Missing config: $Config" }
 
-# ensure src is discoverable
+# ensure src discoverable
 $env:PYTHONPATH = (Resolve-Path (Join-Path $PWD "src")).Path
 Write-Host "PYTHONPATH=$env:PYTHONPATH"
 
-# quick import probe (optional, fast)
-& $py -c "import sys; import importlib; sys.path.insert(0, r'$($env:PYTHONPATH)'.strip()); importlib.import_module('alpha_factory.runner'); print('import_ok')"
-if ($LASTEXITCODE -ne 0) { throw "import probe failed" }
-
-# run the runner as a module
-& $py -m alpha_factory.runner --metrics $Metrics --prev $Prev --corr $Corr --config $Config
-if ($LASTEXITCODE -ne 0) { throw "runner failed ($LASTEXITCODE)" }
+# bootstrap via runpy and explicit argv
+$code = 0
+try {
+  & $py -c "import sys, os, runpy; sys.path.insert(0, os.path.abspath(r'$($env:PYTHONPATH)')); sys.argv = ['alpha_factory.runner', '--metrics', r'$($Metrics)', '--prev', r'$($Prev)', '--corr', r'$($Corr)', '--config', r'$($Config)']; runpy.run_module('alpha_factory.runner', run_name='__main__')"
+  $code = $LASTEXITCODE
+} catch { $code = 1 }
+if ($code -ne 0) { throw "runner failed ($code)" }
