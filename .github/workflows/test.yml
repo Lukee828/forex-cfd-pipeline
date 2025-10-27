@@ -1,4 +1,5 @@
 name: Tests (pytest)
+
 on:
   pull_request:
     branches: [ "main" ]
@@ -32,3 +33,26 @@ jobs:
 
       - name: Run pytest (smoke)
         run: pytest -q --maxfail=1 --disable-warnings tests/ci_smoke_test.py
+
+      - name: Meta Allocator Smoke: export demo allocations
+        run: |
+          python - <<'PY'
+          import time, pathlib
+          from alpha_factory.meta_allocator import MetaAllocator, AllocatorConfig
+          metrics = {'TF': {'sharpe': 1.2, 'dd': 0.06},
+                     'MR': {'sharpe': 1.0, 'dd': 0.05},
+                     'VOL': {'sharpe': 0.8, 'dd': 0.04}}
+          w = MetaAllocator(AllocatorConfig()).allocate(metrics)
+          ts = time.strftime('%Y%m%d_%H%M%S')
+          outdir = pathlib.Path('artifacts/allocations'); outdir.mkdir(parents=True, exist_ok=True)
+          csv = outdir / f'{ts}_alloc.csv'
+          csv.write_text('Sleeve,Weight\n' + '\n'.join(f'{k},{v}' for k,v in w.items()), encoding='utf-8')
+          print('wrote', csv)
+          PY
+
+      - name: Upload allocations (artifact)
+        uses: actions/upload-artifact@v4
+        with:
+          name: allocations
+          path: artifacts/allocations/*.csv
+          retention-days: 7
