@@ -1,8 +1,8 @@
 name: Meta Allocator Smoke
 
 on:
-  workflow_dispatch:
-  pull_request:
+  workflow_dispatch: {}
+  pull_request: {}
 
 jobs:
   test:
@@ -29,15 +29,10 @@ jobs:
       - name: Export allocations (demo)
         run: |
           python - <<'PY'
-import os, json, time, pathlib
+import time, pathlib
 from alpha_factory.meta_allocator import MetaAllocator, AllocatorConfig
-metrics = {
-  'TF': {'sharpe': 1.2, 'dd': 0.06},
-  'MR': {'sharpe': 1.0, 'dd': 0.05},
-  'VOL': {'sharpe': 0.8, 'dd': 0.04},
-}
-m = MetaAllocator(AllocatorConfig())
-w = m.allocate(metrics)
+metrics = {'TF': {'sharpe': 1.2, 'dd': 0.06}, 'MR': {'sharpe': 1.0, 'dd': 0.05}, 'VOL': {'sharpe': 0.8, 'dd': 0.04}}
+w = MetaAllocator(AllocatorConfig()).allocate(metrics)
 ts = time.strftime('%Y%m%d_%H%M%S')
 outdir = pathlib.Path('artifacts/allocations'); outdir.mkdir(parents=True, exist_ok=True)
 csv = outdir / f'{ts}_alloc.csv'
