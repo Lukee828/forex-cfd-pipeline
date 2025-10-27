@@ -1,9 +1,4 @@
-param(
-  [string]$Repo = "C:\Users\speed\Desktop\forex-standalone",
-  [string]$MetricsPath = "",
-  [string]$PrevWeightsPath = "",
-  [string]$CorrPath = ""
-)
+param([string]$Repo = ".", [string]$MetricsPath = "", [string]$PrevWeightsPath = "", [string]$CorrPath = "")
 $ErrorActionPreference="Stop"
 Set-Location $Repo
 $env:PYTHONPATH = "$PWD\src"
