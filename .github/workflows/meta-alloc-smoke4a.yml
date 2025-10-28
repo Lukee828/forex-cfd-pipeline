@@ -7,5 +7,4 @@ jobs:
   hello:
     runs-on: ubuntu-latest
     steps:
-      - name: Echo
-        run: echo "Hello from dispatch @ $GITHUB_SHA"
+      - run: echo "Hello from dispatch @ $GITHUB_SHA"
