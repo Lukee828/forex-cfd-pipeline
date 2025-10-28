@@ -33,14 +33,27 @@ jobs:
           if [ ! -f configs/meta_metrics.json ]; then
             printf '{"TF":{"sharpe":1.2,"dd":0.06},"MR":{"sharpe":1.0,"dd":0.05},"VOL":{"sharpe":0.8,"dd":0.04}}' > configs/meta_metrics.json
           fi
-
       - name: Run meta allocator (timestamped + latest)
         shell: bash
         run: |
           set -e
-          python -m alpha_factory.cli_meta_alloc --mode ewma --metrics configs/meta_metrics.json --outdir artifacts/allocations --write-latest
+          python - <<'PY'
+          import sys, json, time, pathlib, runpy
+          # Ensure src on path
+          src = pathlib.Path('src').resolve()
+          sys.path.insert(0, str(src))
+          # Prepare argv for the CLI file
+          sys.argv = [
+              'cli_meta_alloc.py',
+              '--mode','ewma',
+              '--metrics','configs/meta_metrics.json',
+              '--outdir','artifacts/allocations',
+              '--write-latest',
+          ]
+          # Execute the CLI by path (no reliance on -m or package importability)
+          runpy.run_path('src/alpha_factory/cli_meta_alloc.py', run_name='__main__')
+          PY
           ls -l artifacts/allocations
-
       - name: Upload nightly CSVs
         uses: actions/upload-artifact@v4
         with:
