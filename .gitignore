@@ -63,3 +63,6 @@ tools/*.bak
 ai_lab/risk/
 .pre-commit-config.yaml.BAK-*
 artifacts/
+# allocations CSVs (keep folder local-only)
+artifacts/allocations/
+!artifacts/allocations/.gitkeep
