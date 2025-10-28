@@ -1,0 +1,68 @@
+name: Meta Allocator Nightly
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "10 2 * * *"   # 02:10 UTC daily
+
+permissions:
+  contents: read
+
+env:
+  AF_SKIP_MT5: "1"
+  PYTHONPATH: ${{ github.workspace }}/src
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('.github/ci-requirements.txt','requirements.txt','.github/constraints-ci.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-
+
+      - name: Install minimal deps (resilient)
+        run: |
+          python -m pip install -U pip
+          if [ -f .github/ci-requirements.txt ]; then pip install -r .github/ci-requirements.txt -c .github/constraints-ci.txt || true; fi
+          if [ -f requirements.txt ]; then pip install -r requirements.txt -c .github/constraints-ci.txt || true; fi
+
+      - name: Export allocations (timestamped + latest)
+        run: |
+          python - <<'PY'
+          import os, sys, pathlib, time, json
+          from alpha_factory.meta_allocator import MetaAllocator, AllocatorConfig
+          mpath = pathlib.Path("configs/meta_metrics.json")
+          if mpath.exists():
+              metrics = json.loads(mpath.read_text(encoding="utf-8"))
+          else:
+              metrics = {"TF":{"sharpe":1.2,"dd":0.06},"MR":{"sharpe":1.0,"dd":0.05},"VOL":{"sharpe":0.8,"dd":0.04}}
+          mode = os.environ.get("AF_MODE","ewma")
+          alloc = MetaAllocator(AllocatorConfig(mode=mode)).allocate(metrics)
+          outdir = pathlib.Path("artifacts/allocations"); outdir.mkdir(parents=True, exist_ok=True)
+          ts = time.strftime("%Y%m%d_%H%M%S")
+          csv_ts = outdir / f"{ts}_alloc.csv"
+          csv_ts.write_text("Sleeve,Weight\n" + "\n".join(f"{k},{v}" for k,v in alloc.items()), encoding="utf-8")
+          latest = outdir / "latest.csv"
+          latest.write_text(csv_ts.read_text(encoding="utf-8"), encoding="utf-8")
+          print("WROTE:", csv_ts)
+          print("UPDATED:", latest)
+          PY
+
+      - name: Upload nightly CSVs
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-allocations
+          path: artifacts/allocations/*_alloc.csv
