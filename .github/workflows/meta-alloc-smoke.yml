@@ -1,17 +1,26 @@
 name: Meta Allocator Smoke (dispatch)
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  AF_SKIP_MT5: "1"
+  PYTHONPATH: ${{ github.workspace }}/src
 
 jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    env:
-      PYTHONPATH: src
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,7 +28,15 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-${{ runner.os }}-${{ hashFiles('.github/ci-requirements.txt','requirements.txt','.github/constraints-ci.txt') }}
+          restore-keys: |
+            pip-${{ runner.os }}-
 
       - name: Install minimal deps (resilient)
         run: |
@@ -37,7 +54,6 @@ jobs:
           fi
 
       - name: Export allocations (always produce a CSV)
-        shell: bash
         run: |
           python - <<'PY'
           import time, pathlib, traceback
