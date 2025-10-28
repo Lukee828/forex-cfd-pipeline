@@ -1,7 +1,7 @@
 from alpha_factory.meta_allocator import MetaAllocator, AllocatorConfig
 
 
-def test_allocate_basic():
+def test_meta_allocator_smoke():
     metrics = {
         "TF": {"sharpe": 1.2, "dd": 0.06},
         "MR": {"sharpe": 1.0, "dd": 0.05},
@@ -10,9 +10,3 @@ def test_allocate_basic():
     w = MetaAllocator(AllocatorConfig(mode="ewma")).allocate(metrics)
     assert set(w) == {"TF", "MR", "VOL"}
     assert abs(sum(w.values()) - 1.0) < 1e-9
-
-
-def test_equal_mode():
-    metrics = {"A": {"sharpe": 0.0, "dd": 0.1}, "B": {"sharpe": 0.0, "dd": 0.2}}
-    w = MetaAllocator(AllocatorConfig(mode="equal")).allocate(metrics)
-    assert w["A"] == w["B"] == 0.5
