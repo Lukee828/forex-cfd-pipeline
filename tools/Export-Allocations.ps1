@@ -1,60 +1,33 @@
-param([string]$Repo = ".", [string]$MetricsPath = "", [string]$PrevWeightsPath = "", [string]$CorrPath = "")
-$ErrorActionPreference="Stop"
-Set-Location $Repo
-$env:PYTHONPATH = "$PWD\src"
-
-# choose python
-$py = Join-Path $PWD ".venv311\Scripts\python.exe"
-if (!(Test-Path $py)) {
-  $cmd = (Get-Command python -ErrorAction SilentlyContinue)
-  if ($cmd) { $py = $cmd.Path } else { $py = "py" }
-}
-
-# default demo files (build via objects to avoid quoting issues)
-if (-not $MetricsPath) {
-  $MetricsPath = Join-Path $PWD "tools\_demo_metrics.json"
-  $metrics = @{ TF = @{ sharpe = 1.2; dd = 0.05 }; MR = @{ sharpe = 0.9; dd = 0.04 }; VOL = @{ sharpe = 0.6; dd = 0.03 } }
-  $metrics | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 $MetricsPath
-}
-if (-not $PrevWeightsPath) {
-  $PrevWeightsPath = Join-Path $PWD "tools\_demo_prev.json"
-  $prev = @{ TF = 0.4; MR = 0.4; VOL = 0.2 }
-  $prev | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 $PrevWeightsPath
-}
-if (-not $CorrPath) {
-  $CorrPath = Join-Path $PWD "tools\_demo_corr.json"
-  $pairs = @(@("TF","MR",0.7), @("TF","VOL",0.3), @("MR","VOL",0.2))
-  $pairs | ConvertTo-Json -Depth 5 | Set-Content -Encoding UTF8 $CorrPath
-}
-
-# run python to compute weights and print JSON
-$tmp = Join-Path $PWD "tools\_tmp_export_alloc.py"
-$pyl = @()
-  $pyl += 'import json, sys'
-  $pyl += 'from alpha_factory.meta_allocator import MetaAllocator, AllocatorConfig'
-  $pyl += 'metrics_path, prev_path, corr_path = sys.argv[1:4]'
-  $pyl += 'with open(metrics_path, "r", encoding="utf-8") as f: metrics = json.load(f)'
-  $pyl += 'with open(prev_path, "r", encoding="utf-8") as f: prev = json.load(f)'
-  $pyl += 'with open(corr_path, "r", encoding="utf-8") as f: pairs = json.load(f)'
-  $pyl += 'corr = {(a,b): float(c) for a,b,c in pairs}'
-  $pyl += 'alloc = MetaAllocator(AllocatorConfig())'
-  $pyl += 'w = alloc.allocate(metrics, prev_weights=prev, corr=corr)'
-  $pyl += 'print(json.dumps(w))'
-Set-Content -Encoding UTF8 -Path $tmp -Value $pyl
-$json = & $py $tmp $MetricsPath $PrevWeightsPath $CorrPath
-Remove-Item $tmp -ErrorAction SilentlyContinue
-
-# parse result and write CSV
-$weights = $null
-try { $weights = $json | ConvertFrom-Json } catch { throw "Failed to parse weights JSON: $json" }
-$outDir = Join-Path $PWD "artifacts\allocations"
-New-Item -ItemType Directory -Force -Path $outDir | Out-Null
-$stamp = Get-Date -Format "yyyyMMdd_HHmmss"
-$csv = Join-Path $outDir ($stamp + "_alloc.csv")
-$rows = @()
-$now = Get-Date -Format "s"
-foreach ($k in $weights.PSObject.Properties.Name) {
-  $rows += [PSCustomObject]@{ timestamp = $now; sleeve = $k; weight = [double]$weights.$k }
-}
-$rows | Export-Csv -Path $csv -NoTypeInformation -Encoding UTF8
-Write-Host ("✔ wrote {0}" -f $csv) -ForegroundColor Green
+Param(
+  [ValidateSet("ewma","equal","bayes")] [string]$Mode = "ewma",
+  [string]$Metrics = "configs/meta_metrics.json",
+  [string]$OutDir  = "artifacts/allocations",
+  [switch]$Latest = $true
+)
+$ErrorActionPreference = "Stop"
+$repoRoot = (& git rev-parse --show-toplevel 2>$null); if (-not $repoRoot) { $repoRoot = (Get-Location).Path }
+$srcPath  = Join-Path $repoRoot "src"
+$py = Join-Path $repoRoot ".venv311\Scripts\python.exe"
+if (-not (Test-Path $py)) { $cmd = Get-Command python -ErrorAction SilentlyContinue; $py = ($cmd ? $cmd.Path : "python"); Write-Warning "Using fallback Python: $py" }
+$pkgInit = Join-Path $srcPath "alpha_factory\__init__.py"; if (-not (Test-Path $pkgInit)) { New-Item -ItemType Directory -Force -Path (Split-Path $pkgInit -Parent) | Out-Null; Set-Content -Path $pkgInit -Encoding UTF8 -NoNewline -Value "# package" }
+if (-not (Test-Path $Metrics)) { $mDir = Split-Path -Parent $Metrics; if ($mDir -and -not (Test-Path $mDir)) { New-Item -ItemType Directory -Force -Path $mDir | Out-Null }; $m=@("{","  ""TF"":  { ""sharpe"": 1.20, ""dd"": 0.06 },","  ""MR"":  { ""sharpe"": 1.00, ""dd"": 0.05 },","  ""VOL"": { ""sharpe"": 0.80, ""dd"": 0.04 }","}") -join "`n"; Set-Content -Path $Metrics -Encoding UTF8 -NoNewline -Value ($m + "`n") }
+if (-not (Test-Path $OutDir)) { New-Item -ItemType Directory -Force -Path $OutDir | Out-Null }
+$tmpPy = Join-Path $env:TEMP ("alloc_runner_" + [Guid]::NewGuid().ToString("N") + ".py")
+$R=@()
+$R+="import sys, pathlib"
+$R+="src = pathlib.Path(r'"+$srcPath+"').resolve()"
+$R+="sys.path.insert(0, str(src))"
+$R+="from alpha_factory.cli_meta_alloc import main as cli_main"
+$R+="args=[ '--mode', r'"+$Mode+"', '--metrics', r'"+$Metrics+"', '--outdir', r'"+$OutDir+"' ]"
+if ($Latest) { $R += "args.append('--write-latest')" }
+$R+="cli_main(args)"
+$Rtxt = ($R -join "`n") + "`n"
+[IO.File]::WriteAllText($tmpPy, $Rtxt, (New-Object System.Text.UTF8Encoding($false)))
+Write-Host "PY:  $py" -ForegroundColor DarkCyan
+Write-Host "SRC: $srcPath" -ForegroundColor DarkCyan
+& $py $tmpPy; if ($LASTEXITCODE -ne 0) { throw "alloc runner exit $LASTEXITCODE" }
+Remove-Item $tmpPy -ErrorAction SilentlyContinue
+Write-Host "`n== Outputs ==" -ForegroundColor Cyan
+Get-ChildItem $OutDir -Filter "*_alloc.csv" | Sort-Object LastWriteTime -Descending | Select-Object -First 5 | Format-Table -Auto
+$latestFile = Join-Path $OutDir "latest.csv"; if (Test-Path $latestFile) { Write-Host "`nlatest.csv:" -ForegroundColor Cyan; Get-Content $latestFile }
+Write-Host "`nDone." -ForegroundColor Green
