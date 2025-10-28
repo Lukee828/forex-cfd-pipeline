@@ -3,13 +3,12 @@ name: Meta Allocator Nightly
 on:
   workflow_dispatch: {}
   schedule:
-    - cron: "10 2 * * *"   # 02:10 UTC daily
+    - cron: "10 2 * * *"  # 02:10 UTC daily
 
 permissions:
   contents: read
 
 env:
-  AF_SKIP_MT5: "1"
   PYTHONPATH: ${{ github.workspace }}/src
 
 jobs:
@@ -25,37 +24,28 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Ensure metrics & outdir
+      - name: Prepare outdir (no metrics write; CLI has fallback)
         shell: bash
         run: |
           set -e
-          mkdir -p configs artifacts/allocations
-          if [ ! -f configs/meta_metrics.json ]; then
-            printf '{"TF":{"sharpe":1.2,"dd":0.06},"MR":{"sharpe":1.0,"dd":0.05},"VOL":{"sharpe":0.8,"dd":0.04}}' > configs/meta_metrics.json
-          fi
-      - name: Run meta allocator (timestamped + latest)
+          mkdir -p artifacts/allocations
+
+      - name: Run meta allocator via file (runpy)
         shell: bash
         run: |
           set -e
-          python - <<'PY'
-          import sys, json, time, pathlib, runpy
-          # Ensure src on path
-          src = pathlib.Path('src').resolve()
-          sys.path.insert(0, str(src))
-          # Prepare argv for the CLI file
-          sys.argv = [
-              'cli_meta_alloc.py',
-              '--mode','ewma',
-              '--metrics','configs/meta_metrics.json',
-              '--outdir','artifacts/allocations',
-              '--write-latest',
-          ]
-          # Execute the CLI by path (no reliance on -m or package importability)
-          runpy.run_path('src/alpha_factory/cli_meta_alloc.py', run_name='__main__')
-          PY
+          python - <<PY
+import sys, time, pathlib, runpy
+src = pathlib.Path('src').resolve()
+sys.path.insert(0, str(src))
+sys.argv = ['cli_meta_alloc.py','--mode','ewma','--metrics','configs/meta_metrics.json','--outdir','artifacts/allocations','--write-latest']
+runpy.run_path('src/alpha_factory/cli_meta_alloc.py', run_name='__main__')
+PY
           ls -l artifacts/allocations
+
       - name: Upload nightly CSVs
         uses: actions/upload-artifact@v4
         with:
           name: nightly-allocations
           path: artifacts/allocations/*_alloc.csv
+          if-no-files-found: error
