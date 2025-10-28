@@ -5,18 +5,19 @@ Param(
 $ErrorActionPreference = "Stop"
 $root = (& git rev-parse --show-toplevel 2>$null); if (-not $root) { $root = (Get-Location).Path }
 $src  = Join-Path $root "src"
-$env:PYTHONPATH = $src
-$py = Join-Path $root ".venv311\Scripts\python.exe"
-if (-not (Test-Path $py)) {
-  $cmd = Get-Command python -ErrorAction SilentlyContinue
-  if ($cmd) { $py = $cmd.Path } else { $py = "python" }
-  Write-Warning ("Using fallback Python: {0}" -f $py)
-}
+$pkgDir = Join-Path $src "alpha_factory"
+$pkgInit = Join-Path $pkgDir "__init__.py"
+if (-not (Test-Path $pkgDir)) { New-Item -ItemType Directory -Force -Path $pkgDir | Out-Null }
+if (-not (Test-Path $pkgInit)) { Set-Content -Path $pkgInit -Encoding UTF8 -NoNewline -Value "# package" }
+$cli = Join-Path $pkgDir "cli_meta_alloc.py"
+if (-not (Test-Path $cli)) { throw "Missing CLI: $cli" }
 $outDir = Join-Path $root "artifacts/allocations"
 if (-not (Test-Path $outDir)) { New-Item -ItemType Directory -Force -Path $outDir | Out-Null }
+$py = Join-Path $root ".venv311\Scripts\python.exe"
+if (-not (Test-Path $py)) { $c=Get-Command python -ErrorAction SilentlyContinue; $py = ($c ? $c.Path : "python"); Write-Warning ("Using fallback Python: {0}" -f $py) }
 Write-Host ("PY:  {0}" -f $py) -ForegroundColor DarkCyan
-Write-Host ("SRC: {0}" -f $src) -ForegroundColor DarkCyan
-& $py -m alpha_factory.cli_meta_alloc --mode $Mode --metrics "configs/meta_metrics.json" --outdir $outDir --write-latest
+Write-Host ("CLI: {0}" -f $cli) -ForegroundColor DarkCyan
+& $py $cli --mode $Mode --metrics "configs/meta_metrics.json" --outdir $outDir --write-latest
 if ($LASTEXITCODE -ne 0) { throw ("cli_meta_alloc exit {0}" -f $LASTEXITCODE) }
 Write-Host "`n== Outputs ==" -ForegroundColor Cyan
 Get-ChildItem $outDir -Filter "*_alloc.csv" | Sort-Object LastWriteTime -Descending | Select-Object -First 5 | Format-Table -Auto
