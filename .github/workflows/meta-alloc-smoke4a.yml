@@ -2,43 +2,10 @@ name: Meta Allocator Smoke
 
 on:
   workflow_dispatch: {}
+
 jobs:
-  test:
+  hello:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
-    env:
-      PYTHONPATH: src
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-      - name: Install deps
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install -r .github/ci-requirements.txt
-          python -m pip install -r requirements.txt -c .github/constraints-ci.txt
-      - name: Run smoke test
-        run: pytest -q tests/alpha_factory/test_meta_allocator_smoke.py -vv --maxfail=1
-      - name: Export allocations (demo)
-        run: |
-          python - <<'PY'
-import time, pathlib
-from alpha_factory.meta_allocator import MetaAllocator, AllocatorConfig
-metrics = {'TF': {'sharpe': 1.2, 'dd': 0.06}, 'MR': {'sharpe': 1.0, 'dd': 0.05}, 'VOL': {'sharpe': 0.8, 'dd': 0.04}}
-w = MetaAllocator(AllocatorConfig()).allocate(metrics)
-ts = time.strftime('%Y%m%d_%H%M%S')
-outdir = pathlib.Path('artifacts/allocations'); outdir.mkdir(parents=True, exist_ok=True)
-csv = outdir / f'{ts}_alloc.csv'
-csv.write_text('Sleeve,Weight\n' + '\n'.join(f'{k},{v}' for k,v in w.items()), encoding='utf-8')
-print('WROTE:', csv)
-PY
-      - name: Upload allocation CSVs
-        uses: actions/upload-artifact@v4
-        with:
-          name: allocations
-          path: artifacts/allocations/*.csv
-          if-no-files-found: warn
-          retention-days: 7
+      - name: Echo
+        run: echo "Hello from dispatch @ $GITHUB_SHA"
