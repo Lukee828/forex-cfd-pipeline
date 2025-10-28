@@ -1,7 +1,7 @@
 name: Meta Allocator Nightly
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
   schedule:
     - cron: "10 2 * * *"  # 02:10 UTC daily
 
@@ -24,7 +24,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Prepare outdir (no metrics write; CLI has fallback)
+      - name: Prepare outdir
         shell: bash
         run: |
           set -e
