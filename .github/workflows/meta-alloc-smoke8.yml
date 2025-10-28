@@ -1,8 +1,7 @@
-name: Meta Allocator Smoke (v8)
+name: Meta Allocator Smoke
 
 on:
-  workflow_dispatch: {}
-  pull_request: [opened, synchronize, reopened]
+  workflow_dispatch:
 
 jobs:
   test:
@@ -10,31 +9,20 @@ jobs:
     timeout-minutes: 10
     env:
       PYTHONPATH: src
-    concurrency:
-      group: meta-alloc-smoke8-${{ github.ref }}
-      cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - uses: actions/cache@v4
-        with:
-          path: ~/.cache/pip
-          key: pip-${{ runner.os }}-${{ hashFiles('.github/ci-requirements.txt','requirements.txt','.github/constraints-ci.txt') }}
-          restore-keys: |
-            pip-${{ runner.os }}-
-
       - name: Install deps
         run: |
           python -m pip install --upgrade pip
           python -m pip install -r .github/ci-requirements.txt
           python -m pip install -r requirements.txt -c .github/constraints-ci.txt
-
       - name: Run smoke test
         run: pytest -q tests/alpha_factory/test_meta_allocator_smoke.py -vv --maxfail=1
-
       - name: Export allocations (demo)
         run: |
           python - <<'PY'
@@ -46,11 +34,12 @@ ts = time.strftime('%Y%m%d_%H%M%S')
 outdir = pathlib.Path('artifacts/allocations'); outdir.mkdir(parents=True, exist_ok=True)
 csv = outdir / f'{ts}_alloc.csv'
 csv.write_text('Sleeve,Weight\n' + '\n'.join(f'{k},{v}' for k,v in w.items()), encoding='utf-8')
-print('wrote', csv)
+print('WROTE:', csv)
 PY
-
-      - uses: actions/upload-artifact@v4
+      - name: Upload allocation CSVs
+        uses: actions/upload-artifact@v4
         with:
           name: allocations
           path: artifacts/allocations/*.csv
+          if-no-files-found: warn
           retention-days: 7
