@@ -42,7 +42,7 @@ jobs:
       - name: Export allocations (timestamped + latest)
         run: |
           python - <<'PY'
-          import os, sys, pathlib, time, json
+          import os, pathlib, time, json
           from alpha_factory.meta_allocator import MetaAllocator, AllocatorConfig
           mpath = pathlib.Path("configs/meta_metrics.json")
           if mpath.exists():
