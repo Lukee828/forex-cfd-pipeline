@@ -25,3 +25,10 @@ pwsh -NoProfile -ExecutionPolicy Bypass -File .\tools\Run-FeatureStoreDemo.ps1 -
 ```
 
 Ping: 2025-10-10T09:48:30.8212332+02:00
+
+### Research Scheduler (v1.0.4)
+- Nightly allocator emits `artifacts/allocations/*_alloc.csv` and `latest.csv`
+- Targets CLI writes `artifacts/targets/latest.csv`
+- Workflows:
+  - `.github/workflows/z-meta-alloc-nightly.yml`
+  - `.github/workflows/research-scheduler.yml`
