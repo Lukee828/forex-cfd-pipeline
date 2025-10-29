@@ -1,6 +1,6 @@
 name: Meta Allocator Nightly
-
 on:
+  workflow_dispatch:
   workflow_dispatch: {}
   schedule:
     - cron: "10 2 * * *"  # 02:10 UTC daily
@@ -64,19 +64,19 @@ jobs:
         run: |
           set -e
           python - <<'PY'
-import sys, pathlib
-from datetime import datetime
-sys.path.insert(0, 'src')
-from alpha_factory.cli_targets import main as targets_main
-# demo: zeros; replace with real sleeve inputs later
-argv = [
-  '--alloc-dir','artifacts/allocations',
-  '--assets','EURUSD','GBPUSD','USDJPY',
-  '--cap','0.9','--per-asset-cap','0.5',
-  '--out','artifacts/targets/latest.csv'
-]
-targets_main(argv)
-PY
+          import sys, pathlib
+          from datetime import datetime
+          sys.path.insert(0, 'src')
+          from alpha_factory.cli_targets import main as targets_main
+          # demo: zeros; replace with real sleeve inputs later
+          argv = [
+            '--alloc-dir','artifacts/allocations',
+            '--assets','EURUSD','GBPUSD','USDJPY',
+            '--cap','0.9','--per-asset-cap','0.5',
+            '--out','artifacts/targets/latest.csv'
+          ]
+          targets_main(argv)
+          PY
           ls -l artifacts/targets
 
       - name: Upload targets
