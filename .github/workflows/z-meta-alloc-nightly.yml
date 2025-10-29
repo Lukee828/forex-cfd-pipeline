@@ -58,6 +58,32 @@ jobs:
           PY
           ls -l artifacts/allocations
 
+
+      - name: Emit targets (zeros demo)
+        shell: bash
+        run: |
+          set -e
+          python - <<'PY'
+import sys, pathlib
+from datetime import datetime
+sys.path.insert(0, 'src')
+from alpha_factory.cli_targets import main as targets_main
+# demo: zeros; replace with real sleeve inputs later
+argv = [
+  '--alloc-dir','artifacts/allocations',
+  '--assets','EURUSD','GBPUSD','USDJPY',
+  '--cap','0.9','--per-asset-cap','0.5',
+  '--out','artifacts/targets/latest.csv'
+]
+targets_main(argv)
+PY
+          ls -l artifacts/targets
+
+      - name: Upload targets
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-targets
+          path: artifacts/targets
       - name: Upload nightly CSVs
         uses: actions/upload-artifact@v4
         with:
