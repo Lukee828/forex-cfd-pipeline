@@ -59,18 +59,62 @@ class MetaAllocator:
             raw[k] = max(p, 0.0)
         return self._normalize(raw)
 
-    def allocate(self, metrics: Metrics) -> Dict[str, float]:
+    def allocate(
+        self,
+        metrics: Metrics,
+        *,
+        prev_weights: Mapping[str, float] | None = None,
+        corr: Mapping[tuple[str, str], float] | None = None,
+        smooth: float = 0.10,
+        corr_penalty: float = 0.25,
+    ) -> Dict[str, float]:
+        """
+        Allocate across sleeves.
+
+        Args:
+            metrics: per-sleeve metrics.
+            prev_weights: optional previous weights to blend toward (stability).
+            corr: optional pairwise correlations {(a,b): rho, ...} symmetric.
+            smooth: blend strength toward prev_weights in [0..1].
+            corr_penalty: how strongly to penalize correlation exposure.
+
+        Returns:
+            Dict[str, float]: normalized weights summing to ~1.0.
+        """
         if not metrics:
             return {}
+
         mode = (self.cfg.mode or "ewma").lower()
         try:
             if mode == "equal":
-                out = self._equal(metrics)
+                w = self._equal(metrics)
             elif mode == "bayes":
-                out = self._bayes(metrics)
+                w = self._bayes(metrics)
             else:
-                out = self._ewma(metrics)
+                w = self._ewma(metrics)
         except Exception:
-            # hard fallback for robustness
-            out = self._equal(metrics)
-        return self._normalize(out)
+            w = self._equal(metrics)
+
+        # --- Optional smoothing toward previous weights
+        if prev_weights and smooth > 0.0:
+            # ensure same keyset; missing keys -> 0
+            keys = set(w) | set(prev_weights)
+            prev = {k: max(float(prev_weights.get(k, 0.0)), 0.0) for k in keys}
+            prev = self._normalize(prev)
+            w = {k: (1.0 - smooth) * float(w.get(k, 0.0)) + smooth * prev.get(k, 0.0) for k in keys}
+            w = self._normalize(w)
+
+        # --- Optional correlation penalty (reduce exposure where peers highly correlated)
+        if corr and corr_penalty > 0.0 and w:
+            keys = list(w.keys())
+            # aggregate correlation pressure per name as sum_j rho(i,j)*w_j (rho<0 ignored)
+            press = {k: 0.0 for k in keys}
+            for (a, b), rho in corr.items():
+                if a in press and b in press and rho is not None and rho > 0.0:
+                    press[a] += rho * w.get(b, 0.0)
+                    press[b] += rho * w.get(a, 0.0)
+            # shrink by (1 - corr_penalty * pressure), floor at 0
+            shrunk = {k: max(w[k] * (1.0 - corr_penalty * press[k]), 0.0) for k in keys}
+            w = self._normalize(shrunk)
+
+        return self._normalize(w)
