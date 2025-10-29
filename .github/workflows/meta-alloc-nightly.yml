@@ -1,1 +1,53 @@
-<PASTE THE YAML ABOVE HERE EXACTLY>
+name: Meta Allocator Nightly
+
+on:
+  workflow_dispatch: {}
+  schedule:
+    - cron: "10 2 * * *"  # 02:10 UTC daily
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/src
+  AF_SKIP_MT5: "1"
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Prepare outdir
+        shell: bash
+        run: |
+          set -e
+          mkdir -p artifacts/allocations
+
+      - name: Run meta allocator via file (runpy)
+        shell: bash
+        run: |
+          set -e
+          python - <<'PY'
+          import sys, pathlib, runpy
+          src = pathlib.Path('src').resolve()
+          sys.path.insert(0, str(src))
+          # call the CLI by FILE path to avoid -m import issues on CI
+          sys.argv = ['cli_meta_alloc.py','--mode','ewma','--metrics','configs/meta_metrics.json','--outdir','artifacts/allocations','--write-latest']
+          runpy.run_path('src/alpha_factory/cli_meta_alloc.py', run_name='__main__')
+          PY
+          ls -l artifacts/allocations
+
+      - name: Upload nightly CSVs
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-allocations
+          path: artifacts/allocations/*_alloc.csv
+          if-no-files-found: error
