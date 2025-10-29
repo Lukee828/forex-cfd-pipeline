@@ -1,4 +1,4 @@
-name: Meta Allocator Nightly (Z)
+name: Meta Allocator Nightly
 
 on:
   workflow_dispatch: {}
@@ -9,6 +9,7 @@ permissions:
   contents: read
 
 env:
+  PYTHONPATH: ${{ github.workspace }}/src
   AF_SKIP_MT5: "1"
 
 jobs:
@@ -23,18 +24,23 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+
       - name: Install minimal deps
         shell: bash
         run: |
           set -e
           python -m pip install -U pip
-          # install ONLY what the allocator runtime needs; avoid test pins/constraints
           pip install --only-binary=:all: numpy
-          pip install pandas pyyaml      - name: Ensure outdir
+          pip install pandas pyyaml
+
+      - name: Ensure outdir + fallback metrics
         shell: bash
         run: |
           set -e
-          mkdir -p artifacts/allocations
+          mkdir -p artifacts/allocations configs
+          if [ ! -f configs/meta_metrics.json ]; then
+            printf '{"TF":{"sharpe":1.2,"dd":0.06},"MR":{"sharpe":1.0,"dd":0.05},"VOL":{"sharpe":0.8,"dd":0.04}}' > configs/meta_metrics.json
+          fi
 
       - name: Run meta allocator via file (runpy)
         shell: bash
