@@ -1,1 +1,5 @@
 pytest==8.3.3
+# .github/ci-requirements.txt
+numpy
+pandas
+pyyaml
