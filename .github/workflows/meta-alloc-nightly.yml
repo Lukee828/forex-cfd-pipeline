@@ -8,10 +8,6 @@ on:
 permissions:
   contents: read
 
-env:
-  PYTHONPATH: ${{ github.workspace }}/src
-  AF_SKIP_MT5: "1"
-
 jobs:
   nightly:
     runs-on: ubuntu-latest
@@ -25,7 +21,7 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Prepare outdir
+      - name: Ensure outdir
         shell: bash
         run: |
           set -e
@@ -36,13 +32,13 @@ jobs:
         run: |
           set -e
           python - <<'PY'
-          import sys, pathlib, runpy
-          src = pathlib.Path('src').resolve()
-          sys.path.insert(0, str(src))
-          # call the CLI by FILE path to avoid -m import issues on CI
-          sys.argv = ['cli_meta_alloc.py','--mode','ewma','--metrics','configs/meta_metrics.json','--outdir','artifacts/allocations','--write-latest']
-          runpy.run_path('src/alpha_factory/cli_meta_alloc.py', run_name='__main__')
-          PY
+import sys, pathlib, runpy
+src = pathlib.Path('src').resolve()
+sys.path.insert(0, str(src))
+# call the CLI by FILE path to avoid -m issues on CI
+sys.argv = ['cli_meta_alloc.py','--mode','ewma','--metrics','configs/meta_metrics.json','--outdir','artifacts/allocations','--write-latest']
+runpy.run_path('src/alpha_factory/cli_meta_alloc.py', run_name='__main__')
+PY
           ls -l artifacts/allocations
 
       - name: Upload nightly CSVs
