@@ -26,13 +26,13 @@ jobs:
           python-version: "3.11"
 
       - name: Install minimal deps
-  shell: bash
-  run: |
-    set -e
-    python -m pip install -U pip
-    pip install --only-binary=:all: numpy
-    pip install pandas pyyaml
-    pip install -r .github/ci-requirements.txt || true
+        shell: bash
+        run: |
+          set -e
+          python -m pip install -U pip
+          pip install --only-binary=:all: numpy
+          pip install pandas pyyaml
+          pip install -r .github/ci-requirements.txt || true
 
       - name: Ensure outdir + fallback metrics
         shell: bash
