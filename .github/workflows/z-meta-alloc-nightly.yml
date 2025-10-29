@@ -24,6 +24,15 @@ jobs:
         with:
           python-version: "3.11"
 
+      - name: Install minimal deps
+        shell: bash
+        run: |
+          python -m pip install -U pip
+          if [ -f .github/ci-requirements.txt ]; then
+            pip install -r .github/ci-requirements.txt -c .github/constraints-ci.txt || true
+          else
+            pip install numpy
+          fi
       - name: Ensure outdir
         shell: bash
         run: |
