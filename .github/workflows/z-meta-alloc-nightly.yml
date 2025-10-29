@@ -1,7 +1,7 @@
 name: Meta Allocator Nightly
+
 on:
   workflow_dispatch:
-  workflow_dispatch: {}
   schedule:
     - cron: "10 2 * * *"  # 02:10 UTC daily
 
@@ -26,14 +26,13 @@ jobs:
           python-version: "3.11"
 
       - name: Install minimal deps
-        shell: bash
-        run: |
-          set -e
-          python -m pip install -U pip
-          pip install --only-binary=:all: numpy
-          pip install pandas pyyaml
-          - name: Install minimal deps
-          pip install -r .github/ci-requirements.txt || true
+  shell: bash
+  run: |
+    set -e
+    python -m pip install -U pip
+    pip install --only-binary=:all: numpy
+    pip install pandas pyyaml
+    pip install -r .github/ci-requirements.txt || true
 
       - name: Ensure outdir + fallback metrics
         shell: bash
@@ -53,22 +52,23 @@ jobs:
           src = pathlib.Path('src').resolve()
           sys.path.insert(0, str(src))
           # call the CLI by file path to avoid -m import issues on CI
-          sys.argv = ['cli_meta_alloc.py','--mode','ewma','--metrics','configs/meta_metrics.json','--outdir','artifacts/allocations','--write-latest']
+          sys.argv = [
+              'cli_meta_alloc.py','--mode','ewma',
+              '--metrics','configs/meta_metrics.json',
+              '--outdir','artifacts/allocations','--write-latest'
+          ]
           runpy.run_path('src/alpha_factory/cli_meta_alloc.py', run_name='__main__')
           PY
           ls -l artifacts/allocations
-
 
       - name: Emit targets (zeros demo)
         shell: bash
         run: |
           set -e
           python - <<'PY'
-          import sys, pathlib
-          from datetime import datetime
+          import sys
           sys.path.insert(0, 'src')
           from alpha_factory.cli_targets import main as targets_main
-          # demo: zeros; replace with real sleeve inputs later
           argv = [
             '--alloc-dir','artifacts/allocations',
             '--assets','EURUSD','GBPUSD','USDJPY',
@@ -77,16 +77,20 @@ jobs:
           ]
           targets_main(argv)
           PY
-          ls -l artifacts/targets
+          ls -l artifacts/targets || true
 
-      - name: Upload targets
-        uses: actions/upload-artifact@v4
-        with:
-          name: nightly-targets
-          path: artifacts/targets
-      - name: Upload nightly CSVs
+      - name: Upload allocations
         uses: actions/upload-artifact@v4
         with:
           name: nightly-allocations
           path: artifacts/allocations/*_alloc.csv
           if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload targets
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-targets
+          path: artifacts/targets/**
+          if-no-files-found: error
+          retention-days: 7
