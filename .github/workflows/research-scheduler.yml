@@ -1,0 +1,70 @@
+name: Research Scheduler
+on:
+  workflow_dispatch:
+    inputs:
+      assets:
+        description: "Assets (space-separated)"
+        required: false
+        default: "EURUSD GBPUSD USDJPY"
+      cap:
+        description: "Exposure cap"
+        required: false
+        default: "1.0"
+      per_asset_cap:
+        description: "Per-asset cap"
+        required: false
+        default: "0.5"
+
+permissions:
+  contents: read
+
+env:
+  PYTHONPATH: ${{ github.workspace }}/src
+  AF_SKIP_MT5: "1"
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Minimal deps
+        run: |
+          python -m pip install -U pip
+          pip install --only-binary=:all: numpy
+          pip install pandas pyyaml
+
+      - name: Run scheduler (nightly chain)
+        shell: bash
+        run: |
+          set -e
+          python - <<'PY'
+          import os, sys, runpy
+          os.environ.setdefault("AF_ASSETS", "${{ github.event.inputs.assets }}".strip() or "EURUSD GBPUSD USDJPY")
+          os.environ.setdefault("AF_CAP", "${{ github.event.inputs.cap }}".strip() or "1.0")
+          os.environ.setdefault("AF_PER_ASSET_CAP", "${{ github.event.inputs.per_asset_cap }}".strip() or "0.5")
+          sys.path.insert(0, "src")
+          runpy.run_path("src/alpha_factory/cli_scheduler.py", run_name="__main__")
+          PY
+          ls -l artifacts/allocations || true
+          ls -l artifacts/targets || true
+
+      - name: Upload allocations
+        uses: actions/upload-artifact@v4
+        with:
+          name: rs-allocations
+          path: artifacts/allocations/*_alloc.csv
+          if-no-files-found: error
+
+      - name: Upload targets
+        uses: actions/upload-artifact@v4
+        with:
+          name: rs-targets
+          path: artifacts/targets
