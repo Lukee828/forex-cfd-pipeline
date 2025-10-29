@@ -1,5 +1,4 @@
-# .github/workflows/meta-alloc-nightly.yml
-name: Meta Allocator Nightly
+name: Meta Allocator Nightly (Z)
 
 on:
   workflow_dispatch: {}
