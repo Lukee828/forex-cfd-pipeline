@@ -48,29 +48,28 @@ class AllocationDecider:
         self.conformal_dir = self.repo_root / conformal_dir
         self.hazard_throttle = hazard_throttle
 
+    from alpha_factory.cost_model import CostModel
+
     def decide_for_trade(
         self,
         feature_row: Dict[str, float],
         base_size: float,
         risk_cap_mult: float,
+        symbol: str = "EURUSD",
     ) -> AllocationDecision:
         """
-        feature_row: dict of live features for this trade (what ConformalGate expects)
-        base_size: nominal intended position size (e.g. 1.0 == 100%)
-        risk_cap_mult: global cap from Risk Governor (0.0-1.0),
-                       e.g. 1.0 means full allowed, 0.5 means halve size,
-                       0.0 means no more exposure allowed.
-
-        Returns AllocationDecision.
+        feature_row: live per-trade features (for ConformalGate).
+        base_size: nominal (1.0 == 100% intended size).
+        risk_cap_mult: Risk Governor cap (0..1).
+        symbol: instrument we're about to trade (for cost model lookup).
         """
 
-        # 1. Conformal filter (per-trade)
+        # 1. Conformal filter
         gate = ConformalGate.load_latest(self.conformal_dir)
         conf = gate.score_live_trade(feature_row)
         conf_decision = str(conf.get("decision", "ABSTAIN"))
 
         if conf_decision != "ACCEPT":
-            # Hard block. Do not size at all.
             return AllocationDecision(
                 accept=False,
                 reasons=["conformal_block"],
@@ -80,32 +79,53 @@ class AllocationDecider:
                 final_size=0.0,
             )
 
-        # 2. Regime hazard (global environment risk)
+        # 2. Regime hazard
         haz_state = RegimeHazard.load_latest(self.hazard_dir)
         hazard_on = bool(haz_state.hazard)
 
-        # Start from base size if conformal was okay
         sized = float(base_size)
 
-        # Apply hazard throttle
         if hazard_on:
             sized = min(sized, base_size * self.hazard_throttle)
 
-        # 3. Apply Risk Governor cap multiplier
+        # 3. Risk Governor cap
         sized = sized * float(risk_cap_mult)
 
-        # Enforce non-negative
+        # 4. COST MODEL (Phase 9)
+        cost_dir = self.repo_root / "artifacts" / "cost"
+        cm = CostModel.load_latest(cost_dir)
+        cost_mult = cm.get_multiplier_for_trade(symbol=symbol, context=None)
+
+        if cost_mult <= 0.0:
+            # execution too expensive / liquidity dead -> full block
+            return AllocationDecision(
+                accept=False,
+                reasons=[
+                    "conformal_accept",
+                    "hazard_throttle" if hazard_on else "no_hazard",
+                    "risk_cap" if risk_cap_mult < 1.0 else "risk_ok",
+                    "cost_block",
+                ],
+                conformal_decision=conf_decision,
+                hazard=hazard_on,
+                base_size=base_size,
+                final_size=0.0,
+            )
+
+        sized = sized * cost_mult
+
+        # cleanup
         if sized < 0.0:
             sized = 0.0
 
-        accept_flag = sized > 0.0 and risk_cap_mult > 0.0
+        accept_flag = sized > 0.0 and risk_cap_mult > 0.0 and cost_mult > 0.0
 
         reasons = []
         reasons.append("conformal_accept")
-        if hazard_on:
-            reasons.append("hazard_throttle")
-        if risk_cap_mult < 1.0:
-            reasons.append("risk_cap")
+        reasons.append("hazard_throttle" if hazard_on else "no_hazard")
+        reasons.append("risk_cap" if risk_cap_mult < 1.0 else "risk_ok")
+        if cost_mult < 1.0:
+            reasons.append("cost_throttle")
 
         return AllocationDecision(
             accept=accept_flag,
