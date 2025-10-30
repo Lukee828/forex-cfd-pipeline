@@ -1,16 +1,17 @@
 from __future__ import annotations
-import argparse, pathlib, json
+import argparse
+import pathlib
 from datetime import datetime
 import pandas as pd
 
-from alpha_factory.alloc_io import load_latest_alloc, apply_meta_weights
-from alpha_factory.portfolio import clip_exposure
+from alpha_factory.alloc_io import load_latest_alloc
 from alpha_factory.drift import (
     record_snapshot,
     load_history,
     compute_drift_metrics,
     render_html_report,
 )
+
 
 def main(argv=None):
     p = argparse.ArgumentParser()
@@ -52,6 +53,7 @@ def main(argv=None):
 
     print("WROTE", metrics_csv)
     print("WROTE", report_html)
+
 
 if __name__ == "__main__":
     main()

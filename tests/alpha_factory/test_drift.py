@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from pathlib import Path
 from datetime import datetime, timedelta
 
@@ -12,7 +11,6 @@ from alpha_factory.drift import (
     compute_drift_metrics,
     render_html_report,
 )
-from alpha_factory.alloc_io import Allocation
 
 
 def _fake_targets_csv(path: Path, gross: float = 0.75) -> None:

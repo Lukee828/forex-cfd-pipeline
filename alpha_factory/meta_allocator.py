@@ -1,7 +1,7 @@
 # src/alpha_factory/meta_allocator.py
 from __future__ import annotations
 from dataclasses import dataclass
-from typing import Dict, Mapping, List
+from typing import Dict, Mapping
 import math
 
 
