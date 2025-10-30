@@ -68,3 +68,22 @@ jobs:
         with:
           name: rs-targets
           path: artifacts/targets
+
+      - name: Drift dashboard
+        shell: bash
+        run: |
+          set -e
+          python src/alpha_factory/cli_drift.py \
+            --alloc-dir artifacts/allocations \
+            --targets-path artifacts/targets/latest.csv \
+            --history-path artifacts/history/drift_history.csv \
+            --outdir artifacts/drift \
+            --lookback 10
+      - name: Upload drift
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-drift
+          path: |
+            artifacts/drift
+            artifacts/history/drift_history.csv
+          if-no-files-found: error
