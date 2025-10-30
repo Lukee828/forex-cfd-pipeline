@@ -1,26 +1,27 @@
 {
   "project": "Alpha Factory",
   "repo_root": "C:/Users/speed/Desktop/forex-standalone",
-  "phase": "v1.0-infra",
-  "active_feature": "chatops-20251021_230142",
-  "branch": "main",
+  "phase": "Phase 6 ConformalGate init",
+  "tag_parent": "v1.0.5-drift-dashboard",
+  "active_feature": "conformal-gate-phase6",
+  "feature": "conformal-gate-phase6",
+  "branch": "feat/conformal-gate-phase6",
   "commit": "a17f4f6",
-  "last_synced": "2025-10-27 16:40:39",
+  "last_synced": "2025-10-30 11:45:00",
   "owner": "speed",
-  "ai_guard": "unknown",
-  "notes": "align state to amended 3fea8e0",
-  "hash": "22ebeff63ed6019883833e28e624f5dc7f33f204",
+  "ai_guard": "enabled",
+  "notes": "Introduce ConformalGate selective trade filter + nightly calibration workflow. Drift stack linted and formatted for CI.",
+  "hash": "729655fc1e5f36c287336e955ff1d6dcbb8c8a9b",
   "prev_hash": "965a45f08c09782b37ee704551edf24d533ac288",
   "latest_session": {
-    "utc": "2025-10-27T14:47:05Z",
-    "status": "paused",
-    "pytest": "na",
-    "ai_guard": "unknown",
-    "summary": "session update (continue chatops-20251021_230142@45d03af)",
-    "log": "ai_lab\\session_logs\\2025-10-27_16-17-05-chatops-20251021_230142-continue.md",
-    "end_utc": "2025-10-27T15:40:39Z"
+    "utc": "2025-10-30T10:45:00Z",
+    "status": "dev",
+    "pytest": "conformal_gate smoke passed",
+    "ai_guard": "enabled",
+    "summary": "Phase 6 ConformalGate branch created, sklearn installed, Black/Ruff clean. Ready for PR.",
+    "log": "ai_lab/session_logs/2025-10-30_conformal-gate-phase6-init.md",
+    "end_utc": "2025-10-30T10:50:00Z"
   },
   "repo": "C:\\Users\\speed\\Desktop\\forex-standalone",
-  "state": "ai_lab/state.json",
-  "feature": "chatops-20251021_230142"
+  "state": "ai_lab/state.json"
 }

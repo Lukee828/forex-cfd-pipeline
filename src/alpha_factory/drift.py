@@ -7,6 +7,7 @@ import pandas as pd
 
 # ---- 1) snapshot logging -------------------------------------------------
 
+
 def record_snapshot(
     history_path: Path,
     timestamp: datetime,
@@ -29,7 +30,9 @@ def record_snapshot(
     history_path.parent.mkdir(parents=True, exist_ok=True)
     df_all.to_csv(history_path, index=False)
 
+
 # ---- 2) load + metrics ---------------------------------------------------
+
 
 def load_history(history_path: Path) -> pd.DataFrame:
     if not history_path.exists():
@@ -40,10 +43,12 @@ def load_history(history_path: Path) -> pd.DataFrame:
     df = df.sort_values("ts")
     return df
 
+
 @dataclass
 class DriftMetrics:
     metrics_df: pd.DataFrame  # rows: sleeve + gross, cols: stats
-    html: str                 # rendered report
+    html: str  # rendered report
+
 
 def compute_drift_metrics(df: pd.DataFrame, lookback: int = 10) -> pd.DataFrame:
     """
@@ -70,6 +75,7 @@ def compute_drift_metrics(df: pd.DataFrame, lookback: int = 10) -> pd.DataFrame:
             }
         )
     return pd.DataFrame(out_rows)
+
 
 def render_html_report(df_hist: pd.DataFrame, metrics_df: pd.DataFrame) -> str:
     """
