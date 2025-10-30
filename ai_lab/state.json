@@ -10,7 +10,8 @@
   "last_synced": "2025-10-30 11:45:00",
   "owner": "speed",
   "ai_guard": "enabled",
-  "notes": "EVExitPlanner + EV-Calibrate.ps1 + ExecutionPlanner (trade plan with TP/SL/time-stop/EV)."  "hash": "729655fc1e5f36c287336e955ff1d6dcbb8c8a9b",
+  "notes": "EVExitPlanner + EV-Calibrate.ps1 + ExecutionPlanner (trade plan with TP/SL/time-stop/EV)." ,
+  "hash": "729655fc1e5f36c287336e955ff1d6dcbb8c8a9b",
   "prev_hash": "965a45f08c09782b37ee704551edf24d533ac288",
   "latest_session": {
     "utc": "2025-10-30T10:45:00Z",
