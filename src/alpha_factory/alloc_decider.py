@@ -17,6 +17,7 @@ from typing import Dict, Any
 import pathlib
 from alpha_factory.conformal_gate import ConformalGate
 from alpha_factory.regime_hazard import RegimeHazard
+from alpha_factory.cost_model import CostModel
 
 
 @dataclass
