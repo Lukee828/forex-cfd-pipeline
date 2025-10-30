@@ -1,4 +1,5 @@
 name: Research Scheduler
+
 on:
   workflow_dispatch:
     inputs:
@@ -36,10 +37,12 @@ jobs:
           python-version: "3.11"
 
       - name: Minimal deps
+        shell: bash
         run: |
+          set -e
           python -m pip install -U pip
           pip install --only-binary=:all: numpy
-          pip install pandas pyyaml
+          pip install pandas pyyaml matplotlib
 
       - name: Run scheduler (nightly chain)
         shell: bash
@@ -47,27 +50,40 @@ jobs:
           set -e
           python - <<'PY'
           import os, sys, runpy
-          os.environ.setdefault("AF_ASSETS", "${{ github.event.inputs.assets }}".strip() or "EURUSD GBPUSD USDJPY")
-          os.environ.setdefault("AF_CAP", "${{ github.event.inputs.cap }}".strip() or "1.0")
-          os.environ.setdefault("AF_PER_ASSET_CAP", "${{ github.event.inputs.per_asset_cap }}".strip() or "0.5")
+          os.environ.setdefault(
+              "AF_ASSETS",
+              "${{ github.event.inputs.assets }}".strip() or "EURUSD GBPUSD USDJPY",
+          )
+          os.environ.setdefault(
+              "AF_CAP",
+              "${{ github.event.inputs.cap }}".strip() or "1.0",
+          )
+          os.environ.setdefault(
+              "AF_PER_ASSET_CAP",
+              "${{ github.event.inputs.per_asset_cap }}".strip() or "0.5",
+          )
           sys.path.insert(0, "src")
           runpy.run_path("src/alpha_factory/cli_scheduler.py", run_name="__main__")
           PY
+
           ls -l artifacts/allocations || true
           ls -l artifacts/targets || true
+          ls -R artifacts/history || true
+          ls -R artifacts/drift || true
 
-      - name: Upload allocations
+      - name: Upload nightly-allocations
         uses: actions/upload-artifact@v4
         with:
-          name: rs-allocations
+          name: nightly-allocations
           path: artifacts/allocations/*_alloc.csv
           if-no-files-found: error
 
-      - name: Upload targets
+      - name: Upload nightly-targets
         uses: actions/upload-artifact@v4
         with:
-          name: rs-targets
+          name: nightly-targets
           path: artifacts/targets
+          if-no-files-found: error
 
       - name: Drift dashboard
         shell: bash
@@ -79,7 +95,10 @@ jobs:
             --history-path artifacts/history/drift_history.csv \
             --outdir artifacts/drift \
             --lookback 10
-      - name: Upload drift
+
+          ls -R artifacts/drift || true
+
+      - name: Upload nightly-drift
         uses: actions/upload-artifact@v4
         with:
           name: nightly-drift
