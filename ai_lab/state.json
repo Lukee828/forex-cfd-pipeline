@@ -2,7 +2,30 @@
   "branch": "main",
   "commit": "0e82d4f4feb7ce34989fdd67306b349017f8fef0",
   "phase": "Alpha Factory Infra Milestone 6 — MT5 Bridge Live + Journal Loop",
-  "hash": "0e82d4f4feb7ce34989fdd67306b349017f8fef0",
+  "hash": "7b91cbbac5a262a65aedd433f9623bef603290a5",
   "ai_guard": "enabled",
-  "handoff": "handoff:v2 | repo:C:\\\\Users\\\\speed\\\\Desktop\\\\forex-standalone | branch:main | commit:0e82d4f4feb7ce34989fdd67306b349017f8fef0 | tag:v1.0.6-bridge-mt5-live | phase:Alpha Factory Infra Milestone 6 — MT5 Bridge Live + Journal Loop | state:ai_lab/state.json"
+  "handoff": "handoff:v2 | repo:C:\\Users\\speed\\Desktop\\forex-standalone | branch:main | commit:0e82d4f4feb7ce34989fdd67306b349017f8fef0 | tag:v1.0.6-bridge-mt5-live | phase:Alpha Factory Infra Milestone 6 — MT5 Bridge Live + Journal Loop | state:ai_lab/state.json",
+  "legacy_context": {
+    "project": "Alpha Factory",
+    "repo_root": "C:/Users/speed/Desktop/forex-standalone",
+    "phase": "Phase 15 Live Arm Safety init",
+    "tag_parent": "v1.1.4-live-fill",
+    "active_feature": "live-arm-phase15",
+    "branch": "feat/live-arm-phase15",
+    "last_synced": "2025-10-31 13:30:00",
+    "owner": "speed",
+    "ai_guard": "enabled",
+    "notes": "Add live_guard_config kill switch + BREACH circuit breaker + ticket nonce replay guard + pre/post trade enforcement for spread/latency/slippage. This is the last gate before first real-size live probe.",
+    "latest_session": {
+      "utc": "2025-10-31T12:30:00Z",
+      "status": "dev",
+      "pytest": "live_guard_config + bridge_contract safety green",
+      "ai_guard": "enabled",
+      "summary": "Phase 15 Live Arm Safety branch created. Central kill switch / breach circuit wired into LiveGuard and Bridge-Fill.",
+      "log": "ai_lab/session_logs/2025-10-31_live-arm-phase15-init.md",
+      "end_utc": "2025-10-31T12:32:00Z"
+    },
+    "repo": "C:\\Users\\speed\\Desktop\\forex-standalone",
+    "state": "ai_lab/state.json"
+  }
 }
