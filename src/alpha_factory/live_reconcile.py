@@ -1,8 +1,9 @@
 from __future__ import annotations
 from pathlib import Path
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any
 import json
-from datetime import datetime, timezone
+from datetime import datetime
+
 
 def _read_journal(journal_path: Path) -> List[Dict[str, Any]]:
     if not journal_path.exists():
@@ -20,11 +21,13 @@ def _read_journal(journal_path: Path) -> List[Dict[str, Any]]:
             continue
     return out
 
+
 def _parse_iso(ts: str) -> datetime:
     # journal timestamps are iso-ish UTC like "2025-10-31T10:22:55Z"
     if ts.endswith("Z"):
         ts = ts[:-1] + "+00:00"
     return datetime.fromisoformat(ts)
+
 
 def pair_intents_and_fills(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
@@ -90,9 +93,7 @@ def pair_intents_and_fills(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
         latency_sec = None
         if intent_ts and fill_ts:
-            latency_sec = (
-                _parse_iso(fill_ts) - _parse_iso(intent_ts)
-            ).total_seconds()
+            latency_sec = (_parse_iso(fill_ts) - _parse_iso(intent_ts)).total_seconds()
 
         # extremely naive pips math, assume 1 pip = 0.0001
         pip = 0.0001
@@ -139,16 +140,8 @@ def summarize_execution_quality(pairs: List[Dict[str, Any]]) -> Dict[str, Any]:
             "avg_slippage_pips": None,
         }
 
-    latencies = [
-        p["latency_sec"]
-        for p in pairs
-        if p["latency_sec"] is not None
-    ]
-    slippages = [
-        p["slippage_pips"]
-        for p in pairs
-        if p["slippage_pips"] is not None
-    ]
+    latencies = [p["latency_sec"] for p in pairs if p["latency_sec"] is not None]
+    slippages = [p["slippage_pips"] for p in pairs if p["slippage_pips"] is not None]
 
     n_intents = len(pairs)
     n_fills = sum(1 for p in pairs if p["status"] in ("FILLED", "PARTIAL"))
