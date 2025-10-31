@@ -257,3 +257,34 @@ def build_live_safe_contract(
     )
 
     return contract
+
+def record_fill_from_ea(
+    repo_root: str | Path,
+    symbol: str,
+    side: str,
+    size: float,
+    price_exec: float,
+    ticket_id: str,
+    note: str | None = None,
+) -> None:
+    """
+    Called by AF_BridgeEA.mq5 (Phase 14).
+    Appends a FILL row to journal.ndjson.
+    """
+    root = Path(repo_root)
+    live_dir = root / "artifacts" / "live"
+    live_dir.mkdir(parents=True, exist_ok=True)
+
+    row = {
+        "type": "FILL",
+        "ts_utc": _now_utc_iso(),
+        "symbol": symbol,
+        "side": side,
+        "size": size,
+        "price_exec": price_exec,
+        "ticket_id": ticket_id,
+        "note": note or "",
+    }
+
+    with (live_dir / "journal.ndjson").open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, ensure_ascii=False) + "\n")
