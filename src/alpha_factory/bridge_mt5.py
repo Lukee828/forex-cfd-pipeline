@@ -25,11 +25,57 @@ ALLOWED_SYMBOLS = {
 }
 
 # -------------------------------------------------
+# helper: safe session guard + safe risk governor
+# (these are NEW, but fail-open / no-break)
+# -------------------------------------------------
+def _safe_session_ok_now() -> bool:
+    """
+    Ask alpha_factory.sessions.ok_to_trade_now() if it exists.
+    If module or function is missing -> return True (allow trading).
+    If it exists but raises -> return False (block).
+    This gives you a hook for session freeze / news embargo.
+    """
+    try:
+        from alpha_factory import sessions  # type: ignore
+    except Exception:
+        return True  # module not there -> allow
+    try:
+        return bool(sessions.ok_to_trade_now())
+    except Exception:
+        return False  # if it blows up, safest is block
+
+
+def _safe_risk_can_trade() -> tuple[bool, str | None]:
+    """
+    Ask alpha_factory.risk_governor.live_can_trade() if available.
+    Expect it to return (ok: bool, reason: str|None).
+    If module missing -> (True, None).
+    If call explodes -> (False, "RISK_GOV_ERROR").
+    This becomes your drawdown / exposure stop.
+    """
+    try:
+        from alpha_factory import risk_governor  # type: ignore
+    except Exception:
+        return True, None  # no governor yet -> allow
+    try:
+        res = risk_governor.live_can_trade()
+        # be tolerant about shape
+        if isinstance(res, tuple) and len(res) >= 1:
+            ok = bool(res[0])
+            reason = res[1] if len(res) > 1 else None
+            return ok, reason
+        # weird return -> treat as reject
+        return False, "RISK_GOV_BAD_SHAPE"
+    except Exception as e:
+        return False, f"RISK_GOV_ERROR:{e}"
+
+# -------------------------------------------------
 # low-level utils
 # -------------------------------------------------
 def _now_utc_iso():
     # always Zulu for clarity, include timezone
     return datetime.now(timezone.utc).isoformat()
+
 
 def _append_ndjson(row: dict):
     """
@@ -40,6 +86,7 @@ def _append_ndjson(row: dict):
     with open(JOURNAL_PATH, "a", encoding="utf-8") as fh:
         fh.write(json.dumps(row, ensure_ascii=False))
         fh.write("\n")
+
 
 def _ensure_mt5():
     """
@@ -59,6 +106,7 @@ def _ensure_mt5():
     if not term_info.trade_allowed:
         raise RuntimeError("MT5 trade not allowed (check AutoTrading / permissions)")
 
+
 def _get_positions_snapshot():
     """
     Return list(mt5.positions_get()) safely, never None.
@@ -68,6 +116,7 @@ def _get_positions_snapshot():
         return []
     return list(poss)
 
+
 def _pip_size(symbol: str) -> float:
     """
     Naive pip size guesser.
@@ -75,6 +124,7 @@ def _pip_size(symbol: str) -> float:
     Upgrade later if you want per-symbol tick_size logic.
     """
     return 0.0001
+
 
 def _get_spread_pips(symbol: str) -> float | None:
     """
@@ -96,10 +146,8 @@ def _live_switch_allows_trading() -> bool:
     """
     Global kill switch.
     Reads ai_lab/live_switch.json.
-
     Expected:
         { "allow_live": true }
-
     If file missing, malformed, or allow_live != True -> block.
     """
     try:
@@ -110,6 +158,20 @@ def _live_switch_allows_trading() -> bool:
     except Exception:
         return False
     return bool(data.get("allow_live") is True)
+
+
+def _set_live_switch(allow: bool):
+    """
+    NEW:
+    Circuit-breaker latch.
+    We will force allow_live:false if we breach quality or risk.
+    """
+    os.makedirs("ai_lab", exist_ok=True)
+    data = {"allow_live": bool(allow)}
+    with open(LIVE_SWITCH_PATH, "w", encoding="utf-8") as fh:
+        json.dump(data, fh, ensure_ascii=False, indent=2)
+    print(f"[bridge_mt5] live_switch set to allow_live={allow}")
+
 
 def _is_symbol_allowed(contract: dict) -> tuple[bool, str | None]:
     """
@@ -126,6 +188,7 @@ def _is_symbol_allowed(contract: dict) -> tuple[bool, str | None]:
     spec = ALLOWED_SYMBOLS.get(symbol)
     if spec is None:
         return False, f"SYMBOL_NOT_ALLOWED:{symbol}"
+
     if side not in spec["sides"]:
         return False, f"SIDE_NOT_ALLOWED:{symbol}:{side}"
 
@@ -135,6 +198,7 @@ def _is_symbol_allowed(contract: dict) -> tuple[bool, str | None]:
 
     return True, None
 
+
 def _nonce_already_filled(nonce: str) -> bool:
     """
     Anti-replay:
@@ -143,33 +207,26 @@ def _nonce_already_filled(nonce: str) -> bool:
 
     journal.ndjson can contain:
       • valid JSON dict rows
-      • operator banners, blank lines, etc.  <-- we ignore these
+      • operator banners, blank lines, etc.  <-- ignore
     """
     if not os.path.exists(JOURNAL_PATH):
         return False
-
     with open(JOURNAL_PATH, "r", encoding="utf-8") as fh:
         for raw_line in fh:
             raw_line = raw_line.strip()
             if not raw_line:
                 continue
-            # try to parse JSON
             try:
                 row = json.loads(raw_line)
             except Exception:
-                # not JSON -> ignore
                 continue
-
-            # only care if it's a dict
             if not isinstance(row, dict):
                 continue
-
             if row.get("type") == "FILL":
                 fill = row.get("fill", {})
                 if isinstance(fill, dict):
                     if fill.get("ticket_nonce") == nonce:
                         return True
-
     return False
 
 # -------------------------------------------------
@@ -196,7 +253,6 @@ def make_execution_stub_intent():
     }
 
     os.makedirs(ART_DIR, exist_ok=True)
-
     with open(NEXT_ORDER_PATH, "w", encoding="utf-8") as fh:
         json.dump(contract, fh, ensure_ascii=False, indent=2)
 
@@ -206,17 +262,18 @@ def make_execution_stub_intent():
         "contract": contract,
     }
     _append_ndjson(intent_row)
-
     return contract
 
 # -------------------------------------------------
 # Order send helpers
 # -------------------------------------------------
-def _calc_sltp_prices(symbol: str,
-                      side: str,
-                      entry_price: float,
-                      sl_pips: float,
-                      tp_pips: float):
+def _calc_sltp_prices(
+    symbol: str,
+    side: str,
+    entry_price: float,
+    sl_pips: float,
+    tp_pips: float,
+):
     """
     Convert sl/tp distances in pips into absolute price levels
     based on the direction of the trade.
@@ -229,6 +286,7 @@ def _calc_sltp_prices(symbol: str,
         sl_price = entry_price + sl_pips * pip
         tp_price = entry_price - tp_pips * pip
     return sl_price, tp_price
+
 
 def _send_market_order(contract: dict) -> dict:
     """
@@ -254,8 +312,8 @@ def _send_market_order(contract: dict) -> dict:
     tick_pre = mt5.symbol_info_tick(symbol)
     if tick_pre is None:
         raise RuntimeError(f"no tick for {symbol}")
-    req_price = tick_pre.ask if side == "BUY" else tick_pre.bid
 
+    req_price = tick_pre.ask if side == "BUY" else tick_pre.bid
     pre_spread_pips = _get_spread_pips(symbol)
 
     req = {
@@ -274,10 +332,14 @@ def _send_market_order(contract: dict) -> dict:
     t1 = time.time()
 
     if result is None or result.retcode != mt5.TRADE_RETCODE_DONE:
+        # interpret common safe refusal
+        comment = getattr(result, "comment", "")
+        if "Market closed" in str(comment):
+            # soft abort path: no position was opened
+            raise RuntimeError("SOFT_ABORT_MARKET_CLOSED")
         raise RuntimeError(
             f"order_send failed ret={getattr(result,'retcode',None)} rsp={result}"
         )
-
     exec_ticket = result.order
     exec_price = result.price
     latency_s = t1 - t0
@@ -301,7 +363,6 @@ def _send_market_order(contract: dict) -> dict:
         "tp": tp_price,
         "comment": f"SET-SLTP-{exec_ticket}",
     }
-
     result2 = mt5.order_send(modify_req)
     sltp_ok = (result2 is not None and result2.retcode == mt5.TRADE_RETCODE_DONE)
 
@@ -360,8 +421,8 @@ def _close_position_direct(pos):
         "type_filling": mt5.ORDER_FILLING_IOC,
         "comment": f"CLOSE-{pos.ticket}",
     }
-    result = mt5.order_send(req)
 
+    result = mt5.order_send(req)
     if result and result.retcode == mt5.TRADE_RETCODE_DONE:
         print(
             f"[bridge_mt5] CLOSED_DIRECT {pos_side} "
@@ -386,6 +447,7 @@ def _close_position_direct(pos):
     )
     return None
 
+
 def _pair_positions_by_symbol(positions):
     """
     Build {symbol: {"BUY":[pos,...], "SELL":[pos,...]}}
@@ -396,6 +458,7 @@ def _pair_positions_by_symbol(positions):
         side = "BUY" if p.type == mt5.POSITION_TYPE_BUY else "SELL"
         book.setdefault(sym, {}).setdefault(side, []).append(p)
     return book
+
 
 def _close_by_pairs(book):
     """
@@ -442,6 +505,7 @@ def _close_by_pairs(book):
                 )
     return closed
 
+
 def _close_all_positions_breach(breach_reason: str):
     """
     HARD KILL in hedge mode with 2 phases:
@@ -450,7 +514,6 @@ def _close_all_positions_breach(breach_reason: str):
     """
     positions = _get_positions_snapshot()
     closed_fills = []
-
     for pos in positions:
         fill_info = _close_position_direct(pos)
         if fill_info:
@@ -472,9 +535,11 @@ def _close_all_positions_breach(breach_reason: str):
     }
     return breach_row, len(closed_fills)
 
+
 def _breach_and_flatten(breach_reason: str):
     """
     Immediately flatten everything, then log BREACH.
+    Also latch kill switch OFF.
     """
     _ensure_mt5()
     breach_row, n_closed = _close_all_positions_breach(breach_reason)
@@ -483,6 +548,8 @@ def _breach_and_flatten(breach_reason: str):
         f"[bridge_mt5] FLATTEN COMPLETE. closed positions: {n_closed} "
         f"(breach_reason={breach_reason})\n"
     )
+    # kill further trading until operator intervenes
+    _set_live_switch(False)
 
 # -------------------------------------------------
 # Public entrypoint
@@ -491,32 +558,50 @@ def fire_next_order():
     """
     Load NEXT_ORDER_PATH, run safety gates, maybe send to MT5,
     and enforce execution quality. Auto-flatten on breach.
+    NEW LAYERS ADDED:
+    - session/time embargo check via _safe_session_ok_now()
+    - risk governor check via _safe_risk_can_trade()
+    - kill switch latch OFF if risk governor rejects or any breaker fires
     """
     # 1. global kill switch
     if not _live_switch_allows_trading():
         print("[bridge_mt5] ABORT: global kill switch (LIVE_SWITCH_BLOCKED)")
         return
 
+    # 1.5 session / embargo window
+    if not _safe_session_ok_now():
+        print("[bridge_mt5] ABORT: session/time window not allowed (SESSION_BLOCK)")
+        return
+
+    # 1.6 risk governor (DD / exposure / etc.)
+    rg_ok, rg_reason = _safe_risk_can_trade()
+    if not rg_ok:
+        print(f"[bridge_mt5] ABORT: risk governor block ({rg_reason}) -> RISK_BLOCK")
+        # hard stop trading until operator resets
+        _set_live_switch(False)
+        return
+
     _ensure_mt5()
 
+    # 2. staged ticket present?
     if not os.path.exists(NEXT_ORDER_PATH):
         raise RuntimeError(f"missing {NEXT_ORDER_PATH}, run LiveGuard first")
 
     with open(NEXT_ORDER_PATH, "r", encoding="utf-8") as fh:
         contract = json.load(fh)
 
-    # 2. accept flag
+    # 3. accept flag
     if not contract.get("accept", False):
         print("[bridge_mt5] ABORT: contract.accept == False (CONTRACT_NOT_ACCEPTED)")
         return
 
-    # 3. anti-replay (nonce already fired?)
+    # 4. anti-replay (nonce already fired?)
     nonce = str(contract.get("ticket_nonce", ""))
     if nonce and _nonce_already_filled(nonce):
         print(f"[bridge_mt5] ABORT: nonce {nonce} already filled (REPLAY_BLOCKED)")
         return
 
-    # 4. per-ticket whitelist / sizing
+    # 5. per-ticket whitelist / sizing
     ok, reason = _is_symbol_allowed(contract)
     if not ok:
         print(f"[bridge_mt5] ABORT: {reason} -> flatten safeguard trip (NOT_ALLOWED)")
@@ -525,7 +610,7 @@ def fire_next_order():
 
     symbol = contract["symbol"]
 
-    # 5. Pre-trade spread safety
+    # 6. Pre-trade spread safety
     spread_now = _get_spread_pips(symbol)
     if spread_now is None:
         print("[bridge_mt5] ABORT: cannot read spread, flattening (SPREAD_UNKNOWN)")
@@ -540,10 +625,10 @@ def fire_next_order():
         _breach_and_flatten("SPREAD_TOO_WIDE")
         return
 
-    # 6. Send order
+    # 7. Send order
     fill_info = _send_market_order(contract)
 
-    # 7. Append FILL row
+    # 8. Append FILL row
     fill_row = {
         "ts": fill_info["as_of"],
         "type": "FILL",
@@ -551,7 +636,7 @@ def fire_next_order():
     }
     _append_ndjson(fill_row)
 
-    # 8. Post-fill quality enforcement
+    # 9. Post-fill quality enforcement
     if fill_info["latency_sec"] > MAX_LATENCY_SEC:
         print("[bridge_mt5] EXECUTION QUALITY BREACH: LATENCY_TOO_HIGH -> flatten")
         _breach_and_flatten("LATENCY_TOO_HIGH")
@@ -568,12 +653,14 @@ def fire_next_order():
         _breach_and_flatten("SPREAD_TOO_WIDE_POST")
         return
 
-    # 9. If we got here, trade is live and did not trigger breaker.
-    # Position remains open with SL/TP.
+    # 10. If we got here, trade stays open with SL/TP.
     return fill_info
+
 
 def emergency_flatten(breach_reason: str = "MANUAL_FLATTEN"):
     """
     Public 'panic button'. Closes all open positions and logs BREACH.
+    Also kills future trading until operator explicitly re-enables.
     """
     _breach_and_flatten(breach_reason)
+    # _breach_and_flatten already flips allow_live:false via _set_live_switch(False)
