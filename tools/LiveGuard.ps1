@@ -1,89 +1,83 @@
 # tools/LiveGuard.ps1
-# Phase 15 Live Arm Safety version.
-# Purpose:
-# - Run ExecutionPlanner to produce a TradePlan
-# - Enforce live kill switch / BREACH / spread / staleness
-# - Append INTENT to journal.ndjson
-# - Write next_order.json ticket for AF_BridgeEA.mq5
-# - Echo summary for operator audit
+# Role: Pre-trade guard / ticket builder.
+# - Builds a proposed order ("ticket") and logs INTENT into journal.ndjson
+# - Writes artifacts/live/next_order.json for Fire-NextOrder.ps1 to actually send.
+# Current stub logic:
+#   BUY EURUSD, 0.35 lots, fixed SL/TP, risk_ok.
+#
+# SAFETY:
+# - This script does NOT send orders to MT5. It only stages intent + ticket.
 
-param(
-    [string]$RepoRoot = "$(Get-Location)"
-)
+param()
 
-Write-Host "[LiveGuard] Running ExecutionPlanner -> next_order.json + journal.ndjson ..." -ForegroundColor Cyan
+$ErrorActionPreference = "Stop"
 
-# We'll generate and run a short Python snippet on the fly, same style as before.
-$python = Join-Path $RepoRoot ".venv311\Scripts\python.exe"
+Write-Host ""
+Write-Host "============================================================" -ForegroundColor DarkGray
+Write-Host "[LiveGuard] STUB CONTRACT GENERATOR (INTENT ONLY)" -ForegroundColor Magenta
+Write-Host "This DOES NOT send to the broker." -ForegroundColor Yellow
+Write-Host "============================================================" -ForegroundColor DarkGray
+Write-Host ""
 
-$pyCode = @"
-import json, time
-from pathlib import Path
-from alpha_factory.execution_planner import ExecutionPlanner
-from alpha_factory.bridge_contract import (
-    tradeplan_to_contract,
-    write_next_order,
-    append_intent,
-    guard_pretrade_allowed,
-)
+# --- repo paths ---
+$repoRoot   = (Get-Location).Path
+$liveDir    = Join-Path $repoRoot "artifacts\live"
+$ticketPath = Join-Path $liveDir  "next_order.json"
+$journal    = Join-Path $liveDir  "journal.ndjson"
 
-repo_root = Path(r"$RepoRoot")
+# sanity: are we in repo root (must contain src\alpha_factory)
+if (-not (Test-Path (Join-Path $repoRoot "src\alpha_factory"))) {
+    Write-Host "[LiveGuard] ERROR: run this from repo root (folder that has src\alpha_factory)." -ForegroundColor Red
+    exit 1
+}
 
-# TODO: pull real spread / tick age from MT5 later
-spread_pips = 1.2
-last_tick_age_sec = 0.5
-
-# Pre-trade safety gate. Raises RuntimeError if blocked.
-guard_pretrade_allowed(
-    repo_root,
-    spread_pips=spread_pips,
-    last_tick_age_sec=last_tick_age_sec,
-)
-
-planner = ExecutionPlanner(repo_root=repo_root)
-
-tp = planner.build_trade_plan(
-    feature_row={"dummy": 1.0},   # TODO: real live features
-    base_size=1.0,                # planner applies hazard/risk/cost etc
-    risk_cap_mult=1.0,            # from Risk Governor when wired
-    symbol="EURUSD",
-)
-
-tp_dict = tp.to_dict()
-contract = tradeplan_to_contract(tp_dict)
-
-# Log INTENT immediately
-append_intent(repo_root, contract)
-
-# Write ticket for the EA
-ticket_path = write_next_order(repo_root, contract)
-
-print(f"[LiveGuard] wrote ticket: {ticket_path}")
-print(f"[LiveGuard] contract.accept={contract['accept']} size={contract['size']}")
-print(f"[LiveGuard] nonce={contract.get('ticket_nonce','?')}")
-"@
-
-# Write the Python snippet to artifacts/live/_emit_ticket_tmp.py with UTF-8 LF
-$liveDir = Join-Path $RepoRoot "artifacts\live"
+# --- ensure dirs ---
 if (-not (Test-Path $liveDir)) {
     New-Item -ItemType Directory -Path $liveDir | Out-Null
 }
-$tempPy = Join-Path $liveDir "_emit_ticket_tmp.py"
 
-$utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText($tempPy, ($pyCode -replace "`r`n","`n"), $utf8NoBom)
+# --- build contract/ticket ---
+$nowIso = [DateTime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.ffffffK")  # high-res ISO UTC
 
-# Exec
-& $python $tempPy
-$exitCode = $LASTEXITCODE
-
-if ($exitCode -ne 0) {
-    Write-Host "[LiveGuard] FAILED (exit $exitCode)" -ForegroundColor Red
-    exit $exitCode
+$ticketObj = [ordered]@{
+    as_of          = $nowIso
+    ticket_nonce   = $nowIso
+    symbol         = "EURUSD"
+    side           = "BUY"
+    size           = 0.35
+    accept         = $true
+    sl_pips        = 15
+    tp_pips        = 30
+    time_stop_bars = 90
+    expected_value = 0.012
+    reasons        = @("manual_stub","risk_ok")
 }
 
-# Timestamp for operator visibility
-$tsNow = Get-Date -Format "dd.MM.yyyy HH:mm:ss"
-Write-Host "[LiveGuard] timestamp=$tsNow" -ForegroundColor DarkGray
+# --- write next_order.json (human-readable-ish) ---
+$ticketJson = ($ticketObj | ConvertTo-Json -Depth 5)
+Set-Content -Path $ticketPath -Value $ticketJson -Encoding UTF8 -NoNewline
+
+# --- append INTENT row to journal.ndjson (NDJSON style) ---
+$intentRowObj = [ordered]@{
+    ts       = $nowIso
+    type     = "INTENT"
+    contract = $ticketObj
+}
+$intentLine = ($intentRowObj | ConvertTo-Json -Depth 5 -Compress)
+Add-Content -Path $journal -Value $intentLine -Encoding UTF8
+
+Write-Host "[LG] wrote ticket: $ticketPath" -ForegroundColor Cyan
+Write-Host "[LG] contract.accept=$($ticketObj.accept) size=$($ticketObj.size)" -ForegroundColor Cyan
+Write-Host "[LG] nonce=$($ticketObj.ticket_nonce)" -ForegroundColor Cyan
+Write-Host "[LG] timestamp=$([DateTime]::UtcNow.ToString('dd.MM.yyyy HH:mm:ss UTC'))" -ForegroundColor Cyan
+Write-Host ""
 
 Write-Host "[LiveGuard] Done." -ForegroundColor Green
+Write-Host ""
+
+# tail audit for operator sanity
+if (Test-Path $journal) {
+    Write-Host "---- journal tail (INTENT etc) ----" -ForegroundColor DarkGray
+    Get-Content $journal | Select-Object -Last 10
+    Write-Host "-----------------------------------" -ForegroundColor DarkGray
+}
