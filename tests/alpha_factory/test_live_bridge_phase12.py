@@ -1,127 +1,193 @@
+# tests/alpha_factory/test_live_bridge_phase12.py
 from __future__ import annotations
 
 from pathlib import Path
 import json
 
-from alpha_factory.bridge_contract import (
-    build_live_safe_contract,
-    write_next_order,
-    append_trade_intent,
-    append_trade_fill,
-    _write_json,
+from alpha_factory.live_guard_config import (
+    save_config,
+    LiveConfig,
+    mark_breach,
 )
+from alpha_factory.bridge_contract import (
+    guard_pretrade_allowed,
+    tradeplan_to_contract,
+    append_intent,
+    write_next_order,
+)
+from alpha_factory.live_reconcile import build_execution_report
 
 
-def _write_cfg(tmp: Path, live_enabled: bool = False):
-    """Helper: write a Phase 13-style live_guard_config.json."""
-    cfg_path = tmp / "artifacts" / "live" / "live_guard_config.json"
-    cfg_path.parent.mkdir(parents=True, exist_ok=True)
-    _write_json(
-        cfg_path,
-        {
-            "live_enabled": live_enabled,
-            "max_spread_pips": 2.5,
-            "max_age_sec": 5,
-            "min_size": 0.05,
-            "max_size": 1.00,
-            "dup_window_sec": 30,
-        },
-    )
-
-
-def test_liveguard_happy_path_and_ticket_write(tmp_path: Path):
+def _fake_tradeplan_dict() -> dict:
     """
-    Full dry-run loop:
-    - synthesize TradePlan dict (what ExecutionPlanner would output)
-    - build_live_safe_contract() applies safety rules + dedup
-    - write_next_order() writes the EA ticket
-    - append_trade_intent() journals INTENT
-    - append_trade_fill() journals FILL
+    This mimics ExecutionPlanner.TradePlan.to_dict() output.
+    We shortcut here instead of importing ExecutionPlanner to keep the test fast.
     """
-
-    # prepare config (this time we ENABLE live so contract can pass)
-    _write_cfg(tmp_path, live_enabled=True)
-
-    # fake TradePlan ("what planner.build_trade_plan(...).to_dict()" returns)
-    tp = {
+    return {
         "accept": True,
         "final_size": 0.35,
-        "tp_pips": 25.0,
-        "sl_pips": 12.0,
-        "time_stop_bars": 80,
-        "expected_value": 0.011,
-        "reasons": ["conformal_ok", "hazard_ok", "risk_cap_ok"],
+        "reasons": [
+            "conformal_accept",
+            "risk_ok",
+            "hazard_ok",
+            "cost_ok",
+            "ev_positive",
+        ],
+        "tp_pips": 20.0,
+        "sl_pips": 10.0,
+        "time_stop_bars": 50,
+        "expected_value": 0.007,
         "meta": {
             "symbol": "EURUSD",
             "hazard": False,
-            "ev_note": "synthetic-best",
+            "ev_note": "best-historical-bucket",
             "conformal_decision": "ACCEPT",
         },
     }
 
-    # runtime context we'd normally get from MT5 + model recency
-    market_spread_pips = 1.2  # inside limit
-    model_age_sec = 1.0  # fresh
 
-    # Phase 13 safe contract build
-    contract = build_live_safe_contract(
+def test_pretrade_guard_blocks_if_disabled(tmp_path: Path):
+    # write config with live_enabled = False
+    cfg = LiveConfig(
+        live_enabled=False,
+        max_spread_pips=2.0,
+        max_slippage_pips=1.5,
+        max_latency_sec=2.5,
+    )
+    save_config(tmp_path, cfg)
+
+    # should raise because live is disabled
+    raised = False
+    try:
+        guard_pretrade_allowed(
+            repo_root=tmp_path,
+            spread_pips=0.5,
+            last_tick_age_sec=0.2,
+        )
+    except RuntimeError as ex:
+        raised = True
+        assert "LIVE_DISABLED" in str(ex)
+
+    assert raised is True
+
+    # re-enable live and make sure we're allowed
+    cfg2 = LiveConfig(
+        live_enabled=True,
+        max_spread_pips=2.0,
+        max_slippage_pips=1.5,
+        max_latency_sec=2.5,
+    )
+    save_config(tmp_path, cfg2)
+
+    # now should NOT raise
+    guard_pretrade_allowed(
         repo_root=tmp_path,
-        tp_dict=tp,
-        market_spread_pips=market_spread_pips,
-        model_age_sec=model_age_sec,
+        spread_pips=0.5,
+        last_tick_age_sec=0.2,
     )
 
-    # contract should still be allowed
-    assert contract["symbol"] == "EURUSD"
-    assert contract["size"] == 0.35
-    assert contract["accept"] is True
+    # mark breach file to simulate kill switch after slippage violation
+    mark_breach(tmp_path, "slippage too high")
 
-    # write EA ticket
+    # now it SHOULD raise again
+    raised2 = False
+    try:
+        guard_pretrade_allowed(
+            repo_root=tmp_path,
+            spread_pips=0.5,
+            last_tick_age_sec=0.2,
+        )
+    except RuntimeError as ex:
+        raised2 = True
+        assert "BREACH" in str(ex)
+
+    assert raised2 is True
+
+
+def test_ticket_and_journal_flow(tmp_path: Path):
+    """
+    Dry-run version of the production LiveGuard happy path:
+    - guard allows trade
+    - planner (here faked) produces tradeplan dict
+    - convert to contract
+    - log INTENT
+    - write next_order.json
+    - confirm artefacts are sane
+    - call build_execution_report() with no fills yet
+    """
+
+    # enable live in config, no breach
+    cfg_live = LiveConfig(
+        live_enabled=True,
+        max_spread_pips=5.0,  # loose for the test
+        max_slippage_pips=10.0,
+        max_latency_sec=10.0,
+    )
+    save_config(tmp_path, cfg_live)
+
+    # guard should pass (no exception)
+    guard_pretrade_allowed(
+        repo_root=tmp_path,
+        spread_pips=1.0,
+        last_tick_age_sec=0.1,
+    )
+
+    # fake planner output -> contract
+    tp = _fake_tradeplan_dict()
+    contract = tradeplan_to_contract(tp)
+
+    assert contract["accept"] is True
+    assert contract["size"] == 0.35
+    assert contract["symbol"] == "EURUSD"
+    assert "ticket_nonce" in contract and contract["ticket_nonce"]
+    assert contract["reasons"]
+
+    # write INTENT to journal
+    append_intent(tmp_path, contract)
+
+    # write next_order.json ticket for EA
     ticket_path = write_next_order(tmp_path, contract)
     assert ticket_path.exists()
-    saved = json.loads(ticket_path.read_text(encoding="utf-8"))
-    assert saved["symbol"] == "EURUSD"
-    assert saved["accept"] is True
 
-    # INTENT journal line
+    raw_ticket = json.loads(ticket_path.read_text(encoding="utf-8"))
+    assert raw_ticket["symbol"] == "EURUSD"
+    assert raw_ticket["size"] == 0.35
+
+    # journal.ndjson should now have exactly one INTENT line
     journal_path = tmp_path / "artifacts" / "live" / "journal.ndjson"
-    append_trade_intent(journal_path, contract)
-    text_after_intent = journal_path.read_text(encoding="utf-8").strip().splitlines()
-    assert len(text_after_intent) == 1
-    assert '"event": "INTENT"' in text_after_intent[0]
-    assert '"EURUSD"' in text_after_intent[0]
+    assert journal_path.exists()
+    lines = journal_path.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == 1
+    j0 = json.loads(lines[0])
+    assert j0["type"] == "INTENT"
+    assert j0["contract"]["size"] == 0.35
 
-    # FILL journal line (pretend MT5 executed)
-    append_trade_fill(
-        journal_path=journal_path,
-        ticket_id="MT5-55555",
-        symbol="EURUSD",
-        price_fill=1.08321,
-        filled_size=0.35,
-    )
-    text_all = journal_path.read_text(encoding="utf-8").strip().splitlines()
-    assert len(text_all) == 2
-    assert '"event": "FILL"' in text_all[1]
-    assert '"ticket_id": "MT5-55555"' in text_all[1]
+    # build_execution_report() with no FILL yet should still
+    # produce a well-formed structure and safe defaults
+    rep = build_execution_report(tmp_path)
 
-    # sanity: timestamps look ISO-ish
-    # just check we added something that looks like UTC time
-    assert "ts_utc" in text_all[0]
-    assert "ts_utc" in text_all[1]
+    # new shape (Phase 14+):
+    # {
+    #   "pairs": [...],
+    #   "summary": {
+    #       "fill_ratio": float,
+    #       "avg_slippage_pips": Optional[float],
+    #       "avg_latency_sec": Optional[float],
+    #       "n_fills": int,
+    #       ...
+    #   }
+    # }
+    assert "summary" in rep
+    summary = rep["summary"]
 
-    # sanity: we can parse the INTENT line back to dict
-    first_evt = json.loads(text_all[0])
-    assert first_evt["event"] == "INTENT"
-    assert first_evt["contract"]["symbol"] == "EURUSD"
+    assert "fill_ratio" in summary
+    assert "avg_slippage_pips" in summary
+    assert "avg_latency_sec" in summary
+    assert "n_fills" in summary
 
-    # sanity: we can parse the FILL line back
-    second_evt = json.loads(text_all[1])
-    assert second_evt["event"] == "FILL"
-    assert second_evt["ticket_id"] == "MT5-55555"
-    assert second_evt["symbol"] == "EURUSD"
-    assert second_evt["filled_size"] == 0.35
-
-    # no exception so far => we're good for dry-run
-    # also ensure we didn't write anything outside tmp_path
-    assert str(tmp_path) in str(ticket_path)
-    assert str(tmp_path) in str(journal_path)
+    # with 0 fills, contract hasn't been executed yet
+    # we expect 0 fill ratio, 0 fills, and None for timing/slippage avgs
+    assert summary["n_fills"] == 0
+    assert summary["fill_ratio"] == 0.0
+    assert summary["avg_slippage_pips"] is None
+    assert summary["avg_latency_sec"] is None

@@ -1,290 +1,265 @@
+# src/alpha_factory/bridge_contract.py
 from __future__ import annotations
 
-from typing import Any, Dict, Optional
 from pathlib import Path
-from datetime import datetime, timezone
-import hashlib
+from typing import Any, Dict
 import json
+from datetime import datetime, timezone
+
+from alpha_factory.live_guard_config import (
+    load_config,
+    breach_exists,
+    mark_breach,
+    LiveConfig,
+)
+from alpha_factory.live_reconcile import build_execution_report
+
+
+# ---------------------------------------------------------------------------------
+# time helpers / IDs
+# ---------------------------------------------------------------------------------
 
 
 def _now_utc_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def _read_json(path: Path, default: Any) -> Any:
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except FileNotFoundError:
-        return default
+def _journal_path(repo_root: Path) -> Path:
+    return Path(repo_root) / "artifacts" / "live" / "journal.ndjson"
 
 
-def _write_json(path: Path, obj: Any) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(obj, ensure_ascii=False, indent=2), encoding="utf-8")
+def _ticket_path(repo_root: Path) -> Path:
+    return Path(repo_root) / "artifacts" / "live" / "next_order.json"
+
+
+# ---------------------------------------------------------------------------------
+# Safety gate BEFORE ticket is written
+# ---------------------------------------------------------------------------------
+
+
+def guard_pretrade_allowed(
+    repo_root: Path,
+    spread_pips: float,
+    last_tick_age_sec: float,
+) -> None:
+    """
+    Raise RuntimeError if we are not allowed to trade right now.
+
+    - global kill switch (live_enabled)
+    - BREACH circuit breaker
+    - spread limit
+    - data staleness / latency limit
+    """
+    repo_root = Path(repo_root)
+    cfg: LiveConfig = load_config(repo_root)
+
+    if not cfg.live_enabled:
+        raise RuntimeError("LIVE_DISABLED_BY_CONFIG")
+
+    if breach_exists(repo_root):
+        raise RuntimeError("LIVE_DISABLED_BREACH")
+
+    if spread_pips > cfg.max_spread_pips:
+        raise RuntimeError(f"SPREAD_TOO_WIDE({spread_pips} pips)")
+
+    # treat last_tick_age_sec as how old the latest price is
+    if last_tick_age_sec > cfg.max_latency_sec:
+        raise RuntimeError(f"TICK_STALE({last_tick_age_sec} sec)")
+
+
+# ---------------------------------------------------------------------------------
+# Contract building: planner -> broker-facing ticket
+# ---------------------------------------------------------------------------------
+
+
+def _side_from_tp(tp: Dict[str, Any]) -> str:
+    # For now we assume long-only BUY. Extend later when we wire direction.
+    return "BUY"
+
+
+def _size_from_tp(tp: Dict[str, Any]) -> float:
+    # "final_size" already has ConformalGate / Hazard / Risk Governor / CostModel throttle baked in.
+    return float(tp.get("final_size", 0.0))
+
+
+def _symbol_from_tp(tp: Dict[str, Any]) -> str:
+    meta = tp.get("meta", {})
+    return str(meta.get("symbol", "EURUSD"))
+
+
+def _sl_pips_from_tp(tp: Dict[str, Any]) -> float:
+    return float(tp.get("sl_pips", 0.0))
+
+
+def _tp_pips_from_tp(tp: Dict[str, Any]) -> float:
+    return float(tp.get("tp_pips", 0.0))
+
+
+def _time_stop_from_tp(tp: Dict[str, Any]) -> int:
+    return int(tp.get("time_stop_bars", 0))
+
+
+def _ev_from_tp(tp: Dict[str, Any]) -> float:
+    return float(tp.get("expected_value", 0.0))
 
 
 def tradeplan_to_contract(tp: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Convert a TradePlan dict into a broker-facing contract.
-
-    tp keys (from ExecutionPlanner.TradePlan.to_dict()):
-        accept: bool
-        final_size: float
-        tp_pips, sl_pips, time_stop_bars, expected_value
-        meta.symbol, meta.hazard, meta.conformal_decision, etc.
+    Convert a TradePlan dict (ExecutionPlanner output) into a broker-facing contract.
+    This is what gets written to next_order.json for the EA.
     """
-    symbol = tp.get("meta", {}).get("symbol", "EURUSD")
-    size = float(tp.get("final_size", 0.0))
+    symbol = _symbol_from_tp(tp)
+    side = _side_from_tp(tp)
+    size = _size_from_tp(tp)
 
-    # TODO Phase 13+: side from planner/meta, not hardcoded.
-    # We'll assume BUY for now.
-    side = "BUY"
+    accept = bool(tp.get("accept", True)) and (size > 0.0)
 
     contract = {
         "as_of": _now_utc_iso(),
+        "ticket_nonce": _now_utc_iso(),  # simple timestamp nonce prevents stale replay
         "symbol": symbol,
         "side": side,
         "size": size,
-        "accept": bool(tp.get("accept", False)),
-        "tp_pips": float(tp.get("tp_pips", 0.0)),
-        "sl_pips": float(tp.get("sl_pips", 0.0)),
-        "time_stop_bars": int(tp.get("time_stop_bars", 0)),
-        "expected_value": float(tp.get("expected_value", 0.0)),
-        "reasons": list(tp.get("reasons", [])),
-        "meta": dict(tp.get("meta", {})),
+        "accept": accept,
+        "sl_pips": _sl_pips_from_tp(tp),
+        "tp_pips": _tp_pips_from_tp(tp),
+        "time_stop_bars": _time_stop_from_tp(tp),
+        "expected_value": _ev_from_tp(tp),
+        # include rationale so EA / audit can see why we did this
+        "reasons": tp.get("reasons", []),
     }
+
     return contract
 
 
-def _ticket_signature(contract: Dict[str, Any]) -> str:
+# ---------------------------------------------------------------------------------
+# Journal helpers
+# ---------------------------------------------------------------------------------
+
+
+def append_journal_line(repo_root: Path, row: Dict[str, Any]) -> None:
     """
-    Hash a few stable fields so we can detect duplicate spam.
+    Append a single JSON line to artifacts/live/journal.ndjson.
     """
-    key_parts = [
-        str(contract.get("symbol", "")),
-        str(contract.get("side", "")),
-        f"{contract.get('size',0.0):.5f}",
-        f"{contract.get('tp_pips',0.0):.1f}",
-        f"{contract.get('sl_pips',0.0):.1f}",
-    ]
-    raw = "|".join(key_parts)
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
-
-
-def _load_live_guard_config(repo_root: Path) -> Dict[str, Any]:
-    cfg_path = repo_root / "artifacts" / "live" / "live_guard_config.json"
-    return _read_json(
-        cfg_path,
-        {
-            "live_enabled": False,
-            "max_spread_pips": 2.5,
-            "max_age_sec": 5,
-            "min_size": 0.05,
-            "max_size": 1.00,
-            "dup_window_sec": 30,
-        },
-    )
-
-
-def safety_filter_contract(
-    contract: Dict[str, Any],
-    cfg: Dict[str, Any],
-    market_spread_pips: Optional[float],
-    model_age_sec: Optional[float],
-) -> Dict[str, Any]:
-    """
-    Enforce live_enabled, spread, staleness, size limits.
-    If anything violates, force accept=False and add reason.
-    """
-    reasons = list(contract.get("reasons", []))
-    ok = contract.get("accept", False)
-
-    # live_enabled gate
-    if not bool(cfg.get("live_enabled", False)):
-        ok = False
-        reasons.append("live_disabled")
-
-    # spread gate
-    if market_spread_pips is not None:
-        max_spread = float(cfg.get("max_spread_pips", 9999.0))
-        if market_spread_pips > max_spread:
-            ok = False
-            reasons.append(f"spread_{market_spread_pips:.2f}_gt_{max_spread:.2f}")
-
-    # staleness gate (e.g. hazard snapshot age)
-    if model_age_sec is not None:
-        max_age = float(cfg.get("max_age_sec", 9999.0))
-        if model_age_sec > max_age:
-            ok = False
-            reasons.append(f"stale_{model_age_sec:.1f}s_gt_{max_age:.1f}s")
-
-    # size sanity
-    size = float(contract.get("size", 0.0))
-    if size < float(cfg.get("min_size", 0.0)):
-        ok = False
-        reasons.append("size_below_min")
-    if size > float(cfg.get("max_size", 9999.0)):
-        ok = False
-        reasons.append("size_above_max")
-
-    contract["accept"] = ok
-    contract["reasons"] = reasons
-    return contract
-
-
-def dup_filter_contract(
-    contract: Dict[str, Any],
-    repo_root: Path,
-    cfg: Dict[str, Any],
-    now_ts: Optional[float] = None,
-) -> Dict[str, Any]:
-    """
-    Compare signature of this contract against last fire.
-    If same and too soon, force accept=False.
-    """
+    repo_root = Path(repo_root)
     live_dir = repo_root / "artifacts" / "live"
     live_dir.mkdir(parents=True, exist_ok=True)
 
-    sig_file = live_dir / "last_ticket_signature.json"
+    p = _journal_path(repo_root)
+    with p.open("a", encoding="utf-8") as fh:
+        fh.write(json.dumps(row, ensure_ascii=False) + "\n")
 
-    if now_ts is None:
-        now_ts = datetime.now(timezone.utc).timestamp()
 
-    sig = _ticket_signature(contract)
+def append_intent(repo_root: Path, contract: Dict[str, Any]) -> None:
+    """
+    Log the INTENT to trade before sending ticket to MT5 EA.
+    """
+    row = {
+        "ts": _now_utc_iso(),
+        "type": "INTENT",
+        "contract": contract,
+    }
+    append_journal_line(repo_root, row)
 
-    last_info = _read_json(sig_file, default={"sig": None, "ts": 0.0})
-    last_sig = last_info.get("sig")
-    last_ts = float(last_info.get("ts", 0.0))
 
-    reasons = list(contract.get("reasons", []))
-    ok = contract.get("accept", False)
+def append_fill(
+    repo_root: Path,
+    fill: Dict[str, Any],
+) -> None:
+    """
+    Log a confirmed broker fill (what EA says actually happened).
+    """
+    row = {
+        "ts": _now_utc_iso(),
+        "type": "FILL",
+        "fill": fill,
+    }
+    append_journal_line(repo_root, row)
 
-    if last_sig == sig:
-        dup_window = float(cfg.get("dup_window_sec", 30.0))
-        age = now_ts - last_ts
-        if age < dup_window:
-            ok = False
-            reasons.append(f"duplicate_{age:.1f}s_lt_{dup_window:.1f}s")
 
-    # write current sig (always update, even if blocked)
-    to_write = {"sig": sig, "ts": now_ts}
-    _write_json(sig_file, to_write)
-
-    contract["accept"] = ok
-    contract["reasons"] = reasons
-    return contract
+# ---------------------------------------------------------------------------------
+# Ticket writer for EA consumption
+# ---------------------------------------------------------------------------------
 
 
 def write_next_order(repo_root: Path, contract: Dict[str, Any]) -> Path:
     """
-    Save contract as the next order ticket for EA.
+    Write contract to artifacts/live/next_order.json for AF_BridgeEA.mq5 to read.
     """
-    out_path = repo_root / "artifacts" / "live" / "next_order.json"
-    _write_json(out_path, contract)
-    return out_path
-
-
-def append_trade_intent(journal_path: Path, contract: Dict[str, Any]) -> None:
-    """
-    Append an INTENT line to journal.ndjson.
-    """
-    journal_path.parent.mkdir(parents=True, exist_ok=True)
-    evt = {
-        "event": "INTENT",
-        "ts_utc": _now_utc_iso(),
-        "contract": contract,
-    }
-    with journal_path.open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps(evt, ensure_ascii=False) + "\n")
-
-
-def append_trade_fill(
-    journal_path: Path,
-    ticket_id: str,
-    symbol: str,
-    price_fill: float,
-    filled_size: float,
-) -> None:
-    """
-    Append a FILL line.
-    EA or MT5 poller will call this when a trade is actually executed.
-    """
-    journal_path.parent.mkdir(parents=True, exist_ok=True)
-    evt = {
-        "event": "FILL",
-        "ts_utc": _now_utc_iso(),
-        "ticket_id": ticket_id,
-        "symbol": symbol,
-        "price_fill": price_fill,
-        "filled_size": filled_size,
-    }
-    with journal_path.open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps(evt, ensure_ascii=False) + "\n")
-
-
-def build_live_safe_contract(
-    repo_root: Path,
-    tp_dict: Dict[str, Any],
-    # These two are runtime inputs we’ll later source from MT5 / RegimeHazard age:
-    market_spread_pips: Optional[float],
-    model_age_sec: Optional[float],
-) -> Dict[str, Any]:
-    """
-    Full pipeline for Phase 13:
-    - convert TradePlan -> base contract
-    - apply safety_filter_contract()
-    - apply dup_filter_contract()
-    Returns final contract ready to write.
-    """
-    repo_root = Path(repo_root).resolve()
-    cfg = _load_live_guard_config(repo_root)
-
-    contract = tradeplan_to_contract(tp_dict)
-
-    # safety gates
-    contract = safety_filter_contract(
-        contract,
-        cfg=cfg,
-        market_spread_pips=market_spread_pips,
-        model_age_sec=model_age_sec,
-    )
-
-    # duplicate suppression
-    contract = dup_filter_contract(
-        contract,
-        repo_root=repo_root,
-        cfg=cfg,
-    )
-
-    return contract
-
-def record_fill_from_ea(
-    repo_root: str | Path,
-    symbol: str,
-    side: str,
-    size: float,
-    price_exec: float,
-    ticket_id: str,
-    note: str | None = None,
-) -> None:
-    """
-    Called by AF_BridgeEA.mq5 (Phase 14).
-    Appends a FILL row to journal.ndjson.
-    """
-    root = Path(repo_root)
-    live_dir = root / "artifacts" / "live"
+    repo_root = Path(repo_root)
+    live_dir = repo_root / "artifacts" / "live"
     live_dir.mkdir(parents=True, exist_ok=True)
 
-    row = {
-        "type": "FILL",
-        "ts_utc": _now_utc_iso(),
+    tpath = _ticket_path(repo_root)
+    tpath.write_text(json.dumps(contract, ensure_ascii=False, indent=2), encoding="utf-8")
+    return tpath
+
+
+# ---------------------------------------------------------------------------------
+# Fill ingestion from EA + postfill risk enforcement
+# ---------------------------------------------------------------------------------
+
+
+def record_fill_from_ea(
+    repo_root: Path,
+    symbol: str,
+    side: str,
+    size_exec: float,
+    price_exec: float,
+    ticket_id: int,
+    ticket_nonce: str,
+    latency_sec: float,
+    slippage_pips: float,
+) -> None:
+    """
+    EA calls this via Bridge-Fill.ps1 after execution.
+    """
+    repo_root = Path(repo_root)
+    # ticket_id from MT5 could be a numeric deal id ("123456789")
+    # or a broker ref like "MT5-555". We keep it losslessly as string.
+    try:
+        ticket_id_clean = int(ticket_id)
+    except (TypeError, ValueError):
+        ticket_id_clean = str(ticket_id)
+
+    fill_row = {
+        "as_of": _now_utc_iso(),
         "symbol": symbol,
         "side": side,
-        "size": size,
-        "price_exec": price_exec,
-        "ticket_id": ticket_id,
-        "note": note or "",
+        "size_exec": float(size_exec),
+        "price_exec": float(price_exec),
+        "ticket_id": ticket_id_clean,
+        "ticket_nonce": str(ticket_nonce),
+        "latency_sec": float(latency_sec),
+        "slippage_pips": float(slippage_pips),
     }
 
-    with (live_dir / "journal.ndjson").open("a", encoding="utf-8") as fh:
-        fh.write(json.dumps(row, ensure_ascii=False) + "\n")
+    append_fill(repo_root, fill_row)
+
+
+def enforce_postfill_limits(repo_root: Path) -> None:
+    """
+    After logging a FILL, compute execution quality and possibly mark breach.
+    If breach is marked, LiveGuard will refuse future tickets automatically.
+    """
+    repo_root = Path(repo_root)
+    cfg: LiveConfig = load_config(repo_root)
+    rep = build_execution_report(repo_root)
+
+    # rep keys from live_reconcile.build_execution_report():
+    #   "fill_ratio"
+    #   "avg_slippage_pips"
+    #   "avg_latency_sec"
+    avg_slip = float(rep.get("avg_slippage_pips", 0.0))
+    avg_lat = float(rep.get("avg_latency_sec", 0.0))
+
+    if avg_slip > cfg.max_slippage_pips:
+        mark_breach(
+            repo_root,
+            f"SLIPPAGE {avg_slip} > {cfg.max_slippage_pips}",
+        )
+    elif avg_lat > cfg.max_latency_sec:
+        mark_breach(
+            repo_root,
+            f"LATENCY {avg_lat} > {cfg.max_latency_sec}",
+        )

@@ -1,49 +1,61 @@
+# tools/Bridge-Fill.ps1
+# Phase 15 Live Arm Safety version.
+# Purpose:
+# - Called (manually for now, later automated by EA hook)
+# - Writes a FILL record into journal.ndjson
+# - Runs enforce_postfill_limits() to possibly raise BREACH
+
 param(
-    [string]$RepoRoot = "C:\Users\speed\Desktop\forex-standalone",
-    [string]$Symbol   = "EURUSD",
-    [string]$Side     = "BUY",
-    [double]$Size     = 0.32,
-    [double]$Price    = 1.08652,
-    [string]$TicketId = "1234567",
-    [string]$Note     = "fill from EA"
+    [string]$RepoRoot = "$(Get-Location)",
+
+    # These would normally come from AF_BridgeEA.mq5 at fill time:
+    [string]$Symbol        = "EURUSD",
+    [string]$Side          = "BUY",
+    [double]$SizeExec      = 0.35,
+    [double]$PriceExec     = 1.08652,
+    [int]$TicketId         = 1234567,
+    [string]$TicketNonce   = "demo-nonce-123",
+    [double]$LatencySec    = 0.4,
+    [double]$SlippagePips  = 0.2
 )
 
+Write-Host "[Bridge-Fill] Logging fill + enforcing postfill limits..." -ForegroundColor Cyan
+
 $python = Join-Path $RepoRoot ".venv311\Scripts\python.exe"
-if (-not (Test-Path $python)) {
-    Write-Host "[Bridge-Fill] ERROR: venv python not found at $python" -ForegroundColor Red
-    exit 1
-}
 
-$pyCode = @"
-from alpha_factory.bridge_contract import record_fill_from_ea
-from alpha_factory.live_reconcile import build_execution_report
+$pyFill = @"
+from pathlib import Path
+from alpha_factory.bridge_contract import record_fill_from_ea, enforce_postfill_limits
 
-repo_root = r"$RepoRoot"
+repo_root = Path(r"$RepoRoot")
 
 record_fill_from_ea(
     repo_root=repo_root,
-    symbol="$Symbol",
-    side="$Side",
-    size=$Size,
-    price_exec=$Price,
-    ticket_id="$TicketId",
-    note="$Note",
+    symbol=r"$Symbol",
+    side=r"$Side",
+    size_exec=$SizeExec,
+    price_exec=$PriceExec,
+    ticket_id=$TicketId,
+    ticket_nonce=r"$TicketNonce",
+    latency_sec=$LatencySec,
+    slippage_pips=$SlippagePips,
 )
 
-rep = build_execution_report(repo_root)
-print("[Bridge-Fill] summary:", rep["summary"])
+enforce_postfill_limits(repo_root)
+
+print("[Bridge-Fill] logged FILL + checked breach")
 "@
 
-$tempPy = Join-Path $RepoRoot "artifacts\live\_bridge_fill_tmp.py"
-$targetDir = Split-Path $tempPy -Parent
-if (-not (Test-Path $targetDir)) {
-    New-Item -ItemType Directory -Path $targetDir | Out-Null
+# Write snippet to artifacts/live/_fill_tmp.py
+$liveDir = Join-Path $RepoRoot "artifacts\live"
+if (-not (Test-Path $liveDir)) {
+    New-Item -ItemType Directory -Path $liveDir | Out-Null
 }
+$tempPy = Join-Path $liveDir "_fill_tmp.py"
 
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText($tempPy, ($pyCode -replace "`r`n","`n"), $utf8NoBom)
+[System.IO.File]::WriteAllText($tempPy, ($pyFill -replace "`r`n","`n"), $utf8NoBom)
 
-Write-Host "[Bridge-Fill] running EA fill ingest + reconciliation..." -ForegroundColor Cyan
 & $python $tempPy
 $exitCode = $LASTEXITCODE
 
@@ -51,5 +63,8 @@ if ($exitCode -ne 0) {
     Write-Host "[Bridge-Fill] FAILED (exit $exitCode)" -ForegroundColor Red
     exit $exitCode
 }
+
+$tsNow = Get-Date -Format "dd.MM.yyyy HH:mm:ss"
+Write-Host "[Bridge-Fill] timestamp=$tsNow" -ForegroundColor DarkGray
 
 Write-Host "[Bridge-Fill] Done." -ForegroundColor Green

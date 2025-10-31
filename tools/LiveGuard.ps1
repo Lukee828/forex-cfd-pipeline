@@ -1,107 +1,80 @@
-<#
-.SYNOPSIS
-  LiveGuard pre-trade gate (Phase 13).
-
-.DESCRIPTION
-  - Builds TradePlan via ExecutionPlanner.
-  - Converts to contract, then applies:
-      * live_enabled gate
-      * spread sanity
-      * staleness gate
-      * size sanity
-      * duplicate suppression
-  - Writes next_order.json
-  - Appends INTENT event to journal.ndjson
-  - Emits summary.
-
-  Still DRY-RUN SAFE: does not talk to MT5.
-
-  After Phase 14, EA will:
-    - read next_order.json
-    - if accept==true and live_enabled==true, send order
-    - call append_trade_fill() with execution info
-#>
+# tools/LiveGuard.ps1
+# Phase 15 Live Arm Safety version.
+# Purpose:
+# - Run ExecutionPlanner to produce a TradePlan
+# - Enforce live kill switch / BREACH / spread / staleness
+# - Append INTENT to journal.ndjson
+# - Write next_order.json ticket for AF_BridgeEA.mq5
+# - Echo summary for operator audit
 
 param(
-    [string]$RepoRoot = "C:\Users\speed\Desktop\forex-standalone"
+    [string]$RepoRoot = "$(Get-Location)"
 )
 
+Write-Host "[LiveGuard] Running ExecutionPlanner -> next_order.json + journal.ndjson ..." -ForegroundColor Cyan
+
+# We'll generate and run a short Python snippet on the fly, same style as before.
 $python = Join-Path $RepoRoot ".venv311\Scripts\python.exe"
-if (-not (Test-Path $python)) {
-    Write-Host "[LiveGuard] ERROR: Python venv not found at $python" -ForegroundColor Red
-    exit 1
-}
 
 $pyCode = @"
-import json
+import json, time
 from pathlib import Path
-from datetime import datetime, timezone
-
 from alpha_factory.execution_planner import ExecutionPlanner
 from alpha_factory.bridge_contract import (
-    build_live_safe_contract,
+    tradeplan_to_contract,
     write_next_order,
-    append_trade_intent,
+    append_intent,
+    guard_pretrade_allowed,
 )
 
-repo_root = Path(r"$RepoRoot").resolve()
-live_dir = repo_root / "artifacts" / "live"
-live_dir.mkdir(parents=True, exist_ok=True)
+repo_root = Path(r"$RepoRoot")
+
+# TODO: pull real spread / tick age from MT5 later
+spread_pips = 1.2
+last_tick_age_sec = 0.5
+
+# Pre-trade safety gate. Raises RuntimeError if blocked.
+guard_pretrade_allowed(
+    repo_root,
+    spread_pips=spread_pips,
+    last_tick_age_sec=last_tick_age_sec,
+)
 
 planner = ExecutionPlanner(repo_root=repo_root)
 
-# TODO Phase 14: feed real quote spread + real model_age_sec
-market_spread_pips = 1.2
-model_age_sec = 1.0
-
 tp = planner.build_trade_plan(
-    feature_row={"dummy": 1.0},
-    base_size=1.0,
-    risk_cap_mult=1.0,
+    feature_row={"dummy": 1.0},   # TODO: real live features
+    base_size=1.0,                # planner applies hazard/risk/cost etc
+    risk_cap_mult=1.0,            # from Risk Governor when wired
     symbol="EURUSD",
 )
 
 tp_dict = tp.to_dict()
+contract = tradeplan_to_contract(tp_dict)
 
-# Phase 13 safety filter + duplicate throttle
-contract = build_live_safe_contract(
-    repo_root=repo_root,
-    tp_dict=tp_dict,
-    market_spread_pips=market_spread_pips,
-    model_age_sec=model_age_sec,
-)
+# Log INTENT immediately
+append_intent(repo_root, contract)
 
+# Write ticket for the EA
 ticket_path = write_next_order(repo_root, contract)
 
-journal_path = live_dir / "journal.ndjson"
-append_trade_intent(journal_path, contract)
-
-summary = {
-    "ticket_path": str(ticket_path),
-    "accept": contract.get("accept", False),
-    "size": contract.get("size", 0.0),
-    "reasons": contract.get("reasons", []),
-    "timestamp": datetime.now(timezone.utc).isoformat(),
-}
-
-print(json.dumps(summary))
+print(f"[LiveGuard] wrote ticket: {ticket_path}")
+print(f"[LiveGuard] contract.accept={contract['accept']} size={contract['size']}")
+print(f"[LiveGuard] nonce={contract.get('ticket_nonce','?')}")
 "@
 
-$tempDir = Join-Path $RepoRoot "artifacts\live"
-if (-not (Test-Path $tempDir)) {
-    New-Item -ItemType Directory -Path $tempDir | Out-Null
+# Write the Python snippet to artifacts/live/_emit_ticket_tmp.py with UTF-8 LF
+$liveDir = Join-Path $RepoRoot "artifacts\live"
+if (-not (Test-Path $liveDir)) {
+    New-Item -ItemType Directory -Path $liveDir | Out-Null
 }
-$tempPy = Join-Path $tempDir "_liveguard_tmp.py"
+$tempPy = Join-Path $liveDir "_emit_ticket_tmp.py"
 
 $utf8NoBom = New-Object System.Text.UTF8Encoding($false)
-[System.IO.File]::WriteAllText(
-    $tempPy,
-    ($pyCode -replace "`r`n","`n"),
-    $utf8NoBom
-)
+[System.IO.File]::WriteAllText($tempPy, ($pyCode -replace "`r`n","`n"), $utf8NoBom)
 
-Write-Host "[LiveGuard] Running ExecutionPlanner -> safety -> next_order.json + journal.ndjson ..." -ForegroundColor Cyan
-$raw = & $python $tempPy
+# Exec
+& $python $tempPy
 $exitCode = $LASTEXITCODE
 
 if ($exitCode -ne 0) {
@@ -109,21 +82,8 @@ if ($exitCode -ne 0) {
     exit $exitCode
 }
 
-try {
-    $parsed = $raw | ConvertFrom-Json
-} catch {
-    Write-Host "[LiveGuard] WARN: could not parse summary JSON" -ForegroundColor Yellow
-    $parsed = $null
-}
+# Timestamp for operator visibility
+$tsNow = Get-Date -Format "dd.MM.yyyy HH:mm:ss"
+Write-Host "[LiveGuard] timestamp=$tsNow" -ForegroundColor DarkGray
 
-if ($parsed -ne $null) {
-    Write-Host "[LiveGuard] wrote ticket: $($parsed.ticket_path)" -ForegroundColor Green
-    Write-Host ("[LiveGuard] accept={0} size={1}" -f $parsed.accept,$parsed.size) -ForegroundColor Green
-    Write-Host ("[LiveGuard] reasons={0}" -f ($parsed.reasons -join ";")) -ForegroundColor DarkGray
-    Write-Host ("[LiveGuard] timestamp={0}" -f $parsed.timestamp) -ForegroundColor DarkGray
-} else {
-    Write-Host $raw
-}
-
-Write-Host "[LiveGuard] journal appended -> artifacts/live/journal.ndjson" -ForegroundColor Green
 Write-Host "[LiveGuard] Done." -ForegroundColor Green
