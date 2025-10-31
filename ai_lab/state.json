@@ -1,22 +1,22 @@
 {
   "project": "Alpha Factory",
   "repo_root": "C:/Users/speed/Desktop/forex-standalone",
-  "phase": "Phase 11 Pre-Live Safety init",
-  "tag_parent": "v1.1.0-ev-exit",
-  "active_feature": "bridge-phase11",
-  "branch": "feat/bridge-phase11",
-  "last_synced": "2025-10-31 12:00:00",
+  "phase": "Phase 12 Live Dry-Run init",
+  "tag_parent": "v1.1.1-pre-live",
+  "active_feature": "live-dryrun-phase12",
+  "branch": "feat/live-dryrun-phase12",
+  "last_synced": "2025-10-31 13:00:00",
   "owner": "speed",
   "ai_guard": "enabled",
-  "notes": "Add bridge_contract.py + journal writer + LiveGuard.ps1 gate. Define next_order.json contract for AF_BridgeEA.mq5. This starts controlled MT5 execution path.",
+  "notes": "Add global live_switch.json kill switch, EA fill acknowledgment (last_fill.json -> journal), LiveCollect.ps1, and symbol/side passthrough in ExecutionPlanner/bridge_contract. Preparing dry-run loop.",
   "latest_session": {
-    "utc": "2025-10-31T11:00:00Z",
+    "utc": "2025-10-31T12:00:00Z",
     "status": "dev",
-    "pytest": "bridge_contract smoke passed",
+    "pytest": "bridge_contract + live_bridge_phase12 smoke passed",
     "ai_guard": "enabled",
-    "summary": "Phase 11 Pre-Live Safety init branch created. Bridge contract & LiveGuard defined for EA handoff.",
-    "log": "ai_lab/session_logs/2025-10-31_bridge-phase11-init.md",
-    "end_utc": "2025-10-31T11:05:00Z"
+    "summary": "Phase 12 branch created. Added kill switch, bidirectional journal INTENT/FILL, LiveCollect.ps1.",
+    "log": "ai_lab/session_logs/2025-10-31_live-dryrun-phase12-init.md",
+    "end_utc": "2025-10-31T12:05:00Z"
   },
   "repo": "C:\\Users\\speed\\Desktop\\forex-standalone",
   "state": "ai_lab/state.json"
