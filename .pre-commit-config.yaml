@@ -5,65 +5,28 @@ repos:
   - repo: local
     hooks:
       - id: black-local
-        name: black (system)
-        entry: python -m black
+        name: black (.venv311)
         language: system
+        entry: .venv311\Scripts\python.exe -m black
         types_or: [python]
         exclude: ^(src/data/|build/|data/|updates_zip/|site/|docs/|\.ruff_cache/|\.precommit_cache/)
+
       - id: ruff-local
-        name: ruff (system)
-        entry: python -m ruff
-        args: ["check","--no-cache","--fix","--exit-non-zero-on-fix","--extend-exclude","\\.bak$|\\.(yml|yaml)$|build/|data/|updates_zip/|site/|docs/|\\.ruff_cache/|\\.precommit_cache/"]
+        name: ruff (.venv311)
         language: system
+        entry: .venv311\Scripts\python.exe -m ruff
+        args:
+          [
+            "check",
+            "--no-cache",
+            "--fix",
+            "--exit-non-zero-on-fix",
+            "--extend-exclude",
+            "\\.bak$|\\.(yml|yaml)$|build/|data/|updates_zip/|site/|docs/|\\.ruff_cache/|\\.precommit_cache/",
+          ]
         types_or: [python]
         files: ^(src/|tests/)
         exclude: ^(src/data/|build/|data/|updates_zip/|site/|docs/|\.ruff_cache/|\.precommit_cache/)
-      - id: eof-fixer-local
-        name: end-of-file-fixer (system)
-        entry: python -m pre_commit_hooks.end_of_file_fixer
-        language: system
-        types: [text]
-        exclude: >-
-          (?x)^(
-            updates_zip/|
-            data/|
-            build/|
-            \.precommit_cache/|
-            \.ruff_cache/|
-            site/|
-            docs/|
-            ai_lab/audit_report\.md$|
-            .*\.parquet$|
-            .*\.duckdb$|
-            .*\.zip$|
-            .*\.gz$|
-            .*\.exe$|
-            .*\.png$|
-            .*\.pdf$
-          )
-      - id: trailing-ws-local
-        name: trailing-whitespace (system)
-        entry: python -m pre_commit_hooks.trailing_whitespace_fixer
-        language: system
-        types: [text]
-        exclude: >-
-          (?x)^(
-            updates_zip/|
-            data/|
-            build/|
-            \.precommit_cache/|
-            \.ruff_cache/|
-            site/|
-            docs/|
-            ai_lab/audit_report\.md$|
-            .*\.parquet$|
-            .*\.duckdb$|
-            .*\.zip$|
-            .*\.gz$|
-            .*\.exe$|
-            .*\.png$|
-            .*\.pdf$
-          )
 
   # -------------------------------
   # Writers / Auditors
@@ -74,7 +37,14 @@ repos:
         name: update-manifest
         language: system
         entry: pwsh
-        args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","./tools/Hook-UpdateManifest.ps1"]
+        args:
+          [
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "./tools/Hook-UpdateManifest.ps1",
+          ]
         pass_filenames: false
         stages: [pre-commit]
 
@@ -82,7 +52,14 @@ repos:
         name: verify-manifest
         language: system
         entry: pwsh
-        args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","./tools/Hook-VerifyManifest.ps1"]
+        args:
+          [
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "./tools/Hook-VerifyManifest.ps1",
+          ]
         pass_filenames: false
         stages: [pre-push]
 
@@ -90,7 +67,14 @@ repos:
         name: Update state.json hash (PS7)
         language: system
         entry: pwsh
-        args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","tools/Update-StateHash.ps1"]
+        args:
+          [
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "tools/Update-StateHash.ps1",
+          ]
         pass_filenames: false
         stages: [pre-commit]
 
@@ -98,7 +82,14 @@ repos:
         name: Audit state (PS7)
         language: system
         entry: pwsh
-        args: ["-NoProfile","-ExecutionPolicy","Bypass","-File","./tools/Hook-Audit.ps1"]
+        args:
+          [
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "./tools/Hook-Audit.ps1",
+          ]
         pass_filenames: false
         always_run: true
         stages: [pre-push]
@@ -112,7 +103,16 @@ repos:
         name: Validate handoff (push-time, no-write)
         language: system
         entry: pwsh
-        args: ['-NoProfile','-ExecutionPolicy','Bypass','-File','tools/Hook-Handoff.ps1','-Validate','-NonStrict']
+        args:
+          [
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "tools/Hook-Handoff.ps1",
+            "-Validate",
+            "-NonStrict",
+          ]
         pass_filenames: false
         always_run: true
         stages: [pre-push]
@@ -121,7 +121,14 @@ repos:
         name: Risk Governor (push-time)
         language: system
         entry: pwsh
-        args: ['-NoProfile','-ExecutionPolicy','Bypass','-File','tools/Hook-PrePush-Risk.ps1']
+        args:
+          [
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-File",
+            "tools/Hook-PrePush-Risk.ps1",
+          ]
         pass_filenames: false
         always_run: true
         stages: [pre-push]
